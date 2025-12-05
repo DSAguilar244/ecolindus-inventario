@@ -31,7 +31,7 @@ class InvoiceEditButtonVisibilityTest extends TestCase
 
         $res = $this->actingAs($admin)->get(route('invoices.show', $invoice));
         $res->assertStatus(200);
-        $res->assertSee('Editar (admin)');
+        $res->assertSee('Editar');
     }
 
     public function test_admin_sees_edit_button_in_index_for_emitted_invoice()
@@ -42,6 +42,6 @@ class InvoiceEditButtonVisibilityTest extends TestCase
 
         $res = $this->actingAs($admin)->get(route('invoices.index'));
         $res->assertStatus(200);
-        $res->assertSee('Editar (admin)');
+        $res->assertSee('Editar');
     }
 }

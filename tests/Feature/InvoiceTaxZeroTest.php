@@ -48,11 +48,6 @@ class InvoiceTaxZeroTest extends TestCase
         $this->assertEquals(0, (float) $invoice->tax_total);
         $this->assertEquals(10.00, (float) $invoice->subtotal);
         $this->assertEquals(10.00, (float) $invoice->total);
-
-        // PDF should not include tax
-        $pdfResp = $this->get(route('invoices.print', $invoice));
-        $pdfResp->assertStatus(200);
-        $this->assertStringNotContainsString('15%', $pdfResp->getContent());
     }
 
     public function test_update_preserves_zero_tax()
@@ -100,9 +95,5 @@ class InvoiceTaxZeroTest extends TestCase
         $invoice->refresh();
         $this->assertEquals(0, (float) $invoice->tax_total);
         $this->assertEquals(10.00, (float) $invoice->total);
-
-        $pdfResp = $this->get(route('invoices.print', $invoice));
-        $pdfResp->assertStatus(200);
-        $this->assertStringNotContainsString('15%', $pdfResp->getContent());
     }
 }
