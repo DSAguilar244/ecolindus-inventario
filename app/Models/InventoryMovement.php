@@ -15,7 +15,7 @@ class InventoryMovement extends Model
         'quantity',
         'reason',
         'supplier_id',
-        'user_id'
+        'user_id',
     ];
 
     public function product()

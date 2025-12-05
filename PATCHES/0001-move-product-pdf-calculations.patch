@@ -1,0 +1,42 @@
+*** Begin Patch
+*** Update File: app/Http/Controllers/ProductController.php
+@@
+     public function exportPdf()
+     {
+-        $products = Product::orderBy('name')->get();
+-
+-        $pdf = Pdf::loadView('products.pdf', compact('products'));
+-
+-        // Configurar el PDF
+-        $pdf->setPaper('a4');
+-        $pdf->output();
+-        $canvas = $pdf->getDomPDF()->getCanvas();
+-
+-        // Agregar número de página
+-        $canvas->page_text(550, 810, 'Página {PAGE_NUM} de {PAGE_COUNT}', null, 10);
+-
+-        return $pdf->download('ECOLINDUS_Reporte_Inventario_'.now()->format('Y-m-d_His').'.pdf');
++        // Suggested change: compute summary metrics here and pass to view to
++        // avoid computing them in the Blade template (which iterates collections).
++        $products = Product::with(['brand','categoryModel'])->orderBy('name')->get();
++
++        $summary = [
++            'total_products' => $products->count(),
++            'critical' => Product::whereColumn('stock', '<', 'min_stock')->count(),
++            'total_stock' => Product::sum('stock'),
++            'categories' => Product::select('category')->distinct()->count(),
++        ];
++
++        $pdf = Pdf::loadView('products.pdf', compact('products', 'summary'));
++
++        // Configurar el PDF
++        $pdf->setPaper('a4');
++        $pdf->output();
++        $canvas = $pdf->getDomPDF()->getCanvas();
++
++        // Agregar número de página
++        $canvas->page_text(550, 810, 'Página {PAGE_NUM} de {PAGE_COUNT}', null, 10);
++
++        return $pdf->download('ECOLINDUS_Reporte_Inventario_'.now()->format('Y-m-d_His').'.pdf');
+     }
+*** End Patch
