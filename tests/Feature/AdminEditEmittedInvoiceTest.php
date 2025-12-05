@@ -53,7 +53,15 @@ class AdminEditEmittedInvoiceTest extends TestCase
             'audit_reason' => 'Ajuste por conteo inventario'
         ];
 
-        $res = $this->actingAs($admin)->put(route('invoices.update', $invoice), $payload);
+        // Ensure the session has a CSRF token by visiting the edit page first
+        $this->actingAs($admin);
+        $this->get(route('invoices.edit', $invoice));
+
+        // Read the session token and include it explicitly in the PUT payload
+        $token = $this->app['session']->token();
+        $payload['_token'] = $token;
+
+        $res = $this->put(route('invoices.update', $invoice), $payload);
         $res->assertRedirect(route('invoices.show', $invoice));
         $res->assertSessionHas('success');
 
