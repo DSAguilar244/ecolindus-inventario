@@ -27,6 +27,7 @@ class Invoice extends Model
         'cancelled_by',
         'cancelled_at',
         'notes',
+        'payment_method',
     ];
 
     protected $dates = ['date'];
@@ -62,6 +63,11 @@ class Invoice extends Model
     public function items()
     {
         return $this->hasMany(InvoiceItem::class);
+    }
+
+    public function payment()
+    {
+        return $this->hasOne(InvoicePayment::class);
     }
 
     public function calculateTotals()

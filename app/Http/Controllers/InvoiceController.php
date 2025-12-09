@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
+use App\Services\InvoiceTotalsCalculator;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 // Auth facade already imported above
@@ -16,6 +17,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use App\Models\AuditLog;
+use App\Models\InvoicePayment;
 
 class InvoiceController extends Controller
 {
@@ -70,8 +72,6 @@ class InvoiceController extends Controller
 
         // Basic stock validation only if emitting now: ensure products have enough stock when defined
         if ($willEmit) {
-            // Log incoming items tax rates for debugging (temporary)
-            Log::debug('Creating invoice - incoming item tax rates', ['items' => array_map(function($i){ return $i['tax_rate'] ?? null; }, $data['items'])]);
             foreach ($data['items'] as $it) {
                 $product = $productMap[$it['product_id']] ?? null;
                 if (! $product) {
@@ -139,24 +139,22 @@ class InvoiceController extends Controller
                 'invoice_number' => $candidate,
                 'date' => now(),
                 'status' => $willEmit ? Invoice::STATUS_EMITIDA : Invoice::STATUS_PENDIENTE,
+                'payment_method' => $data['payment_method'] ?? null,
             ]);
 
-            $subtotal = 0;
-            $taxTotal = 0;
+            $calculator = new InvoiceTotalsCalculator();
+            $totals = $calculator->calculate($data['items']);
 
-            // Log incoming items tax rates for debugging (temporary)
-            Log::debug('Updating invoice - incoming item tax rates', ['items' => array_map(function($i){ return $i['tax_rate'] ?? null; }, $data['items'])]);
             foreach ($data['items'] as $it) {
                 $product = $productMap[$it['product_id']] ?? null;
                 $quantity = $it['quantity'];
                 $unitPrice = $it['unit_price'];
                 $lineTotal = $quantity * $unitPrice;
-                // Server-side: if tax_rate is not provided in the payload, prefer the product default tax
+                // Server-side: if tax_rate is not provided in the payload, prefer the product default tax_rate
                 // Consider explicit tax_rate even if zero (0), otherwise fallback to product default
-                $taxRate = array_key_exists('tax_rate', $it) && $it['tax_rate'] !== null && $it['tax_rate'] !== '' ? (int) $it['tax_rate'] : (int) ($product->tax ?? 0);
-                $tax = (($taxRate) / 100) * $lineTotal;
+                $taxRate = array_key_exists('tax_rate', $it) && $it['tax_rate'] !== null && $it['tax_rate'] !== '' ? (int) $it['tax_rate'] : (int) ($product->tax_rate ?? 0);
 
-                $invoiceItem = InvoiceItem::create([
+                InvoiceItem::create([
                     'invoice_id' => $invoice->id,
                     'product_id' => $product->id,
                     'quantity' => $quantity,
@@ -165,19 +163,35 @@ class InvoiceController extends Controller
                     'line_total' => $lineTotal,
                 ]);
 
-                $subtotal += $lineTotal;
-                $taxTotal += $tax;
-
                 // Decrement stock if product has 'stock' attribute and we're emitting
                 if ($willEmit && isset($product->stock)) {
                     $product->decrement('stock', $quantity);
                 }
             }
 
-            $invoice->subtotal = $subtotal;
-            $invoice->tax_total = $taxTotal;
-            $invoice->total = $subtotal + $taxTotal;
+            $invoice->subtotal = round($totals['subtotal'], 2);
+            $invoice->tax_total = round($totals['tax'], 2);
+            $invoice->total = round($totals['total'], 2);
             $invoice->save();
+
+            // Persist invoice payments if provided (cash_amount and transfer_amount)
+            $cashInput = $request->input('cash_amount');
+            $transferInput = $request->input('transfer_amount');
+            if(!is_null($cashInput) || !is_null($transferInput)){
+                $cash = (float) ($cashInput ?? 0);
+                $transfer = (float) ($transferInput ?? 0);
+                // Validate that cash + transfer equals invoice total (2 decimal tolerance)
+                if (round($cash + $transfer, 2) !== round($invoice->total, 2)) {
+                    DB::rollBack();
+                    return redirect()->back()->withInput()->with('error', 'La suma de efectivo y transferencia no coincide con el total de la factura.');
+                }
+
+                InvoicePayment::create([
+                    'invoice_id' => $invoice->id,
+                    'cash_amount' => $cash,
+                    'transfer_amount' => $transfer,
+                ]);
+            }
 
             DB::commit();
 
@@ -316,8 +330,7 @@ class InvoiceController extends Controller
                 $quantity = $it['quantity'];
                 $unitPrice = $it['unit_price'];
                 $lineTotal = $quantity * $unitPrice;
-                $taxRate = array_key_exists('tax_rate', $it) && $it['tax_rate'] !== null && $it['tax_rate'] !== '' ? (int) $it['tax_rate'] : (int) ($product->tax ?? 0);
-                $tax = (($taxRate) / 100) * $lineTotal;
+                $taxRate = array_key_exists('tax_rate', $it) && $it['tax_rate'] !== null && $it['tax_rate'] !== '' ? (int) $it['tax_rate'] : (int) ($product->tax_rate ?? 0);
 
                 InvoiceItem::create([
                     'invoice_id' => $invoice->id,
@@ -327,9 +340,6 @@ class InvoiceController extends Controller
                     'tax_rate' => $taxRate,
                     'line_total' => $lineTotal,
                 ]);
-
-                $subtotal += $lineTotal;
-                $taxTotal += $tax;
 
                 if ($willEmit && isset($product->stock)) {
                     // If we previously had an emitted invoice, adjust stock by delta based on old items
@@ -366,12 +376,20 @@ class InvoiceController extends Controller
                 }
             }
 
-            $invoice->subtotal = $subtotal;
-            $invoice->tax_total = $taxTotal;
-            $invoice->total = $subtotal + $taxTotal;
+            $calculator = new InvoiceTotalsCalculator();
+            $totals = $calculator->calculate($data['items']);
+
+            $invoice->subtotal = round($totals['subtotal'], 2);
+            $invoice->tax_total = round($totals['tax'], 2);
+            $invoice->total = round($totals['total'], 2);
 
             if ($willEmit) {
                 $invoice->status = Invoice::STATUS_EMITIDA;
+            }
+
+            // Persist payment method if present in payload
+            if (array_key_exists('payment_method', $data)) {
+                $invoice->payment_method = $data['payment_method'];
             }
 
             $invoice->save();
@@ -549,5 +567,19 @@ class InvoiceController extends Controller
         $pdf->setPaper('a4', 'landscape');
 
         return $pdf->stream('facturas-export-'.now()->format('Ymd').'.pdf');
+    }
+
+    public function updateInvoiceNumber(Request $request, Invoice $invoice)
+    {
+        $request->validate([
+            'invoice_number' => 'required|string|unique:invoices,invoice_number,'.$invoice->id,
+        ]);
+
+        $invoice->update([
+            'invoice_number' => $request->invoice_number,
+            'manually_set_number' => true,
+        ]);
+
+        return redirect()->back()->with('success', 'Número de factura actualizado correctamente.');
     }
 }

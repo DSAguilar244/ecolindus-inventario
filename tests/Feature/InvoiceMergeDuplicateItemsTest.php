@@ -14,7 +14,7 @@ class InvoiceMergeDuplicateItemsTest extends TestCase
     public function test_it_merges_duplicate_items_for_same_product()
     {
         $user = User::factory()->create();
-        $product = Product::factory()->create(['price' => 15, 'tax' => 0, 'stock' => 50]);
+        $product = Product::factory()->create(['price' => 15, 'tax_rate' => 0, 'stock' => 50]);
 
         $payload = [
             'emit' => '1',
@@ -54,7 +54,7 @@ class InvoiceMergeDuplicateItemsTest extends TestCase
     public function test_update_merges_duplicate_items_for_same_product()
     {
         $user = User::factory()->create();
-        $product = Product::factory()->create(['price' => 15, 'tax' => 0, 'stock' => 50]);
+        $product = Product::factory()->create(['price' => 15, 'tax_rate' => 0, 'stock' => 50]);
 
         // Create a pending invoice we can update
         $invoice = \App\Models\Invoice::factory()->create(['user_id' => $user->id, 'status' => \App\Models\Invoice::STATUS_PENDIENTE]);

@@ -106,6 +106,9 @@
         </div>
     </div>
 
+    <!-- Cash Management Section -->
+    @include('dashboard.cash_section')
+
     <!-- Recent Activity and Charts Row -->
     <!-- Sales Summary Row -->
     <div class="row g-4 mb-4">
@@ -150,9 +153,9 @@
             <div class="card shadow-sm">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Últimos Movimientos</h5>
-                    <a href="{{ route('movements.index') }}" class="btn btn-sm btn-outline-dark">
+                    {{-- <a href="{{ route('movements.index') }}" class="btn btn-sm btn-outline-dark">
                         Ver todos <i class="bi bi-arrow-right"></i>
-                    </a>
+                    </a> --}}
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -224,12 +227,12 @@
                         <a href="{{ route('products.create') }}" class="btn btn-outline-dark">
                             <i class="bi bi-plus-circle me-2"></i>Nuevo Producto
                         </a>
-                        <a href="{{ route('movements.create') }}" class="btn btn-outline-dark">
+                        {{-- <a href="{{ route('movements.create') }}" class="btn btn-outline-dark">
                             <i class="bi bi-arrow-left-right me-2"></i>Registrar Movimiento
                         </a>
                         <a href="{{ route('suppliers.create') }}" class="btn btn-outline-dark">
                             <i class="bi bi-person-plus me-2"></i>Nuevo Proveedor
-                        </a>
+                        </a> --}}
                     </div>
                 </div>
             </div>

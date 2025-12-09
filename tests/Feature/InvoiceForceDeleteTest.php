@@ -16,7 +16,7 @@ class InvoiceForceDeleteTest extends TestCase
     public function test_non_admin_cannot_force_delete_invoice()
     {
         $user = User::factory()->create();
-        $product = Product::factory()->create(['price' => 10, 'stock' => 50, 'tax' => 0]);
+        $product = Product::factory()->create(['price' => 10, 'stock' => 50, 'tax_rate' => 0]);
         $invoice = Invoice::factory()->create(['user_id' => $user->id]);
         $item = InvoiceItem::create(['invoice_id' => $invoice->id, 'product_id' => $product->id, 'quantity' => 1, 'unit_price' => 10, 'line_total' => 10]);
 
@@ -31,7 +31,7 @@ class InvoiceForceDeleteTest extends TestCase
     public function test_admin_can_force_delete_invoice_and_items()
     {
         $admin = User::factory()->create(['is_admin' => true]);
-        $product = Product::factory()->create(['price' => 10, 'stock' => 50, 'tax' => 0]);
+        $product = Product::factory()->create(['price' => 10, 'stock' => 50, 'tax_rate' => 0]);
         $invoice = Invoice::factory()->create(['user_id' => $admin->id]);
         $item = InvoiceItem::create(['invoice_id' => $invoice->id, 'product_id' => $product->id, 'quantity' => 1, 'unit_price' => 10, 'line_total' => 10]);
 

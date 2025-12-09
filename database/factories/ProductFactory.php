@@ -24,7 +24,7 @@ class ProductFactory extends Factory
             'stock' => $this->faker->numberBetween(10, 100),
             'min_stock' => $this->faker->numberBetween(5, 20),
             'price' => $this->faker->randomFloat(2, 1, 100),
-            'tax' => $this->faker->randomElement([0, 15]),
+            'tax_rate' => $this->faker->randomElement([0, 15]),
         ];
     }
 }

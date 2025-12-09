@@ -93,7 +93,7 @@
                             </td>
                             <td>{{ $product->min_stock }}</td>
                             <td>{{ number_format($product->price,2) }}
-                                <div><small class="text-muted">PVP: {{ number_format($product->price * (1 + ($product->tax ?? 0)/100),2) }} | {{ $product->tax }}%</small></div>
+                                <div><small class="text-muted">PVP: {{ number_format($product->price * (1 + ($product->tax_rate ?? 0)/100),2) }} | {{ $product->tax_rate }}%</small></div>
                             </td>
                             <td class="text-end pe-4">
                                 <a href="{{ route('products.edit', $product) }}" class="btn btn-sm btn-outline-dark me-1">

@@ -14,7 +14,7 @@ class InvoiceIgnoresEmptyRowsTest extends TestCase
     public function test_ignores_empty_item_rows_and_saves_single_item()
     {
         $user = User::factory()->create();
-        $product = Product::factory()->create(['price' => 10, 'tax' => 0, 'stock' => 100]);
+        $product = Product::factory()->create(['price' => 10, 'tax_rate' => 0, 'stock' => 100]);
 
         $payload = [
             'emit' => '1',

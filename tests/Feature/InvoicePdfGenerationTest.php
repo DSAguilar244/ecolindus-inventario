@@ -16,7 +16,7 @@ class InvoicePdfGenerationTest extends TestCase
     public function test_pdf_print_returns_pdf_and_contains_invoice_number()
     {
         $user = User::factory()->create();
-        $product = Product::factory()->create(['price' => 10, 'stock' => 10, 'tax' => 0]);
+        $product = Product::factory()->create(['price' => 10, 'stock' => 10, 'tax_rate' => 0]);
         $customer = \App\Models\Customer::factory()->create();
         $invoice = Invoice::factory()->create(['user_id' => $user->id, 'customer_id' => $customer->id]);
         $item = InvoiceItem::create(['invoice_id' => $invoice->id, 'product_id' => $product->id, 'quantity' => 2, 'unit_price' => 10, 'line_total' => 20]);

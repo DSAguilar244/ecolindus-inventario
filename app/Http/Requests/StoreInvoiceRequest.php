@@ -3,7 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Rules\EcuadorIdentification;
+use App\Rules\PaymentTotalMatchesInvoice;
 use App\Models\Product;
+use App\Services\InvoiceTotalsCalculator;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreInvoiceRequest extends FormRequest
@@ -24,7 +26,10 @@ class StoreInvoiceRequest extends FormRequest
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.tax_rate' => 'nullable|in:0,15',
+            'items.*.tax_rate' => ['nullable', 'in:0,' . config('taxes.iva')],
+            'payment_method' => ['nullable', 'in:Pago físico,Transferencia'],
+            'cash_amount' => ['nullable','numeric','min:0', new PaymentTotalMatchesInvoice($this)],
+            'transfer_amount' => 'nullable|numeric|min:0',
         ];
     }
 
@@ -87,6 +92,8 @@ class StoreInvoiceRequest extends FormRequest
             if (isset($it['product_id']) && (!isset($it['unit_price']) || $it['unit_price'] === '' || is_null($it['unit_price']))) {
                 $p = $productMap[$it['product_id']] ?? null;
                 if ($p) {
+                    // Default unit_price to product base price. The UI shows gross price for clarity,
+                    // but we keep server calculations based on base price to avoid double-taxing.
                     $it['unit_price'] = (float) $p->price;
                 }
             }
@@ -98,6 +105,20 @@ class StoreInvoiceRequest extends FormRequest
 
             // ensure quantity is float
             $it['quantity'] = is_numeric($it['quantity']) ? (float) $it['quantity'] : $it['quantity'];
+
+            // If the client provided a unit_price that matches the product PVP (gross shown in UI),
+            // convert it back to base price for calculations. Compare to 2-decimal UI representation.
+            if (isset($it['unit_price']) && isset($it['product_id'])) {
+                $p = $productMap[$it['product_id']] ?? null;
+                if ($p) {
+                    $provided = (float) $it['unit_price'];
+                    $gross = round($p->pvp, 2);
+                    if (abs($provided - $gross) < 0.001 && ($p->tax_rate ?? 0) > 0) {
+                        $base = $provided / (1 + (($p->tax_rate ?? 0) / 100));
+                        $it['unit_price'] = round($base, 4);
+                    }
+                }
+            }
         }
         // clean reference
         unset($it);
@@ -129,4 +150,6 @@ class StoreInvoiceRequest extends FormRequest
 
         $this->merge(['items' => $filtered]);
     }
+
+    
 }

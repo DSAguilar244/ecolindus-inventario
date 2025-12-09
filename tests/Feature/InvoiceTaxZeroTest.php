@@ -18,7 +18,7 @@ class InvoiceTaxZeroTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        $product = Product::factory()->create([ 'price' => 10, 'tax' => 15 ]);
+        $product = Product::factory()->create([ 'price' => 10, 'tax_rate' => 15 ]);
         $customer = Customer::factory()->create();
 
         $response = $this->post(route('invoices.store'), [
@@ -55,7 +55,7 @@ class InvoiceTaxZeroTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        $product = Product::factory()->create([ 'price' => 10, 'tax' => 15 ]);
+        $product = Product::factory()->create([ 'price' => 10, 'tax_rate' => 15 ]);
         $customer = Customer::factory()->create();
 
         // create invoice initially with default tax 15% for item - as PENDING so we can update

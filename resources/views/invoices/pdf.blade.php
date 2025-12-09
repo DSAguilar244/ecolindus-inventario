@@ -67,8 +67,8 @@
                         @if(file_exists($logoPath))
                             <img src="file://{{ $logoPath }}" alt="ECOLINDUS Logo">
                         @else
-                            <strong style="font-size:12px; display:block; margin-bottom:2px;">ECOLINDUS</strong>
-                            <div class="small">RUC / Identificación: {{ config('app.company_ruc') ?? '---' }}</div>
+                            <strong style="font-size:12px; display:block; margin-bottom:2px;">{{ config('company.name', 'ECOLINDUS') }}</strong>
+                            <div class="small">RUC: {{ config('company.ruc', '---') }}</div>
                         @endif
                     </td>
                     <td style="vertical-align:top; padding:0; border:none; text-align:right;">
@@ -83,6 +83,9 @@
         <p class="meta">Cliente: {{ optional($invoice->customer)->first_name }} {{ optional($invoice->customer)->last_name }} &middot; {{ optional($invoice->customer)->identification }}</p>
         @if(optional($invoice->customer)->address)
             <p class="meta">Dirección: {{ optional($invoice->customer)->address }}</p>
+        @endif
+        @if($invoice->payment_method)
+            <p class="meta">Forma de pago: {{ $invoice->payment_method }}</p>
         @endif
 
         <table>
@@ -100,9 +103,15 @@
                 <tr>
                     <td>{{ optional($item->product)->name }}</td>
                     <td class="right">{{ $item->quantity }}</td>
-                    <td class="right">{{ number_format($item->unit_price,2) }}</td>
-                    <td class="right">{{ $item->tax_rate }}% ({{ number_format((($item->tax_rate ?? 0)/100) * $item->line_total,2) }})</td>
-                    <td class="right">{{ number_format($item->line_total + ((($item->tax_rate ?? 0)/100) * $item->line_total),2) }}</td>
+                    @php
+                        $taxRate = $item->tax_rate ?? 0;
+                        // Display unit price including tax for presentation when tax applies
+                        $displayUnit = ($taxRate > 0) ? ($item->unit_price * (1 + ($taxRate/100))) : $item->unit_price;
+                        $lineTax = ($taxRate/100) * $item->line_total;
+                    @endphp
+                    <td class="right">{{ number_format($displayUnit,2) }}</td>
+                    <td class="right">{{ $item->tax_rate }}% ({{ number_format($lineTax,2) }})</td>
+                    <td class="right">{{ number_format($item->line_total + $lineTax,2) }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -123,6 +132,16 @@
                     <td style="border:none; padding:4px 6px;" class="small">Total:</td>
                     <td style="border:none; padding:4px 6px; text-align:right;"><strong>{{ number_format($invoice->total,2) }}</strong></td>
                 </tr>
+                @if($invoice->payment)
+                <tr style="border-top: 1px solid #ddd; padding-top:4px; margin-top:4px;">
+                    <td style="border:none; padding:4px 6px;" class="small">Efectivo:</td>
+                    <td style="border:none; padding:4px 6px; text-align:right;"><strong>{{ number_format($invoice->payment->cash_amount,2) }}</strong></td>
+                </tr>
+                <tr>
+                    <td style="border:none; padding:4px 6px;" class="small">Transferencia:</td>
+                    <td style="border:none; padding:4px 6px; text-align:right;"><strong>{{ number_format($invoice->payment->transfer_amount,2) }}</strong></td>
+                </tr>
+                @endif
             </table>
             </div>
         </div>

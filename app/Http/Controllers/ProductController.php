@@ -66,7 +66,7 @@ class ProductController extends Controller
             'stock' => 'nullable|integer|min:0',
             'min_stock' => 'nullable|integer|min:0',
             'price' => 'required|numeric|min:0',
-            'tax' => 'nullable|in:0,15',
+            'tax_rate' => 'nullable|in:0,15',
         ]);
 
         // If category_id provided, prefer it; otherwise use textual category
@@ -113,7 +113,7 @@ class ProductController extends Controller
             'stock' => 'sometimes|integer|min:0',
             'min_stock' => 'sometimes|integer|min:0',
             'price' => 'sometimes|numeric|min:0',
-            'tax' => 'sometimes|in:0,15',
+            'tax_rate' => 'sometimes|in:0,15',
         ]);
 
         if (! empty($validated['category_id'])) {
@@ -172,7 +172,7 @@ class ProductController extends Controller
                 'id' => $p->id,
                 'text' => $p->name.' - '.($p->code ?? ''),
                 'price' => (float) $p->price,
-                'tax' => (int) ($p->tax ?? 0),
+                'tax_rate' => (int) ($p->tax_rate ?? 0),
                 'code' => $p->code,
             ];
         });

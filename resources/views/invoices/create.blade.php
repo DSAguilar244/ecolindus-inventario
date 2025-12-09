@@ -67,8 +67,8 @@
                                         <td>
                                             <select name="items[][product_id]" class="form-control product-select">
                                                 @foreach($products as $p)
-                                                    @php $pvp = number_format(($p->price ?? 0) * (1 + ($p->tax ?? 0)/100),2); @endphp
-                                                    <option value="{{ $p->id }}" data-price="{{ $p->price ?? 0 }}" data-tax="{{ $p->tax ?? 0 }}" {{ (int)($it['product_id'] ?? 0) === $p->id ? 'selected' : '' }}>{{ $p->name }} - ${{ number_format($p->price ?? 0,2) }} (PVP: ${{ $pvp }})</option>
+                                                    @php $pvp = number_format(($p->price ?? 0) * (1 + ($p->tax_rate ?? 0)/100),2); @endphp
+                                                    <option value="{{ $p->id }}" data-price="{{ $p->price ?? 0 }}" data-tax="{{ $p->tax_rate ?? 0 }}" {{ (int)($it['product_id'] ?? 0) === $p->id ? 'selected' : '' }}>{{ $p->name }} - ${{ number_format($p->price ?? 0,2) }} (PVP: ${{ $pvp }})</option>
                                                 @endforeach
                                             </select>
                                         </td>
@@ -77,7 +77,7 @@
                                         <td>
                                             <select name="items[][tax_rate]" class="form-control">
                                                 <option value="0" {{ (($it['tax_rate'] ?? '') === '0') ? 'selected' : '' }}>0%</option>
-                                                <option value="15" {{ (($it['tax_rate'] ?? '') === '15') ? 'selected' : '' }}>15%</option>
+                                                <option value="{{ config('taxes.iva') }}" {{ (($it['tax_rate'] ?? '') === (string)config('taxes.iva')) ? 'selected' : '' }}>{{ config('taxes.iva') }}%</option>
                                             </select>
                                         </td>
                                         <td><button type="button" class="btn btn-danger btn-sm remove-row">X</button></td>
@@ -97,6 +97,17 @@
                     </div>
                 </div>
 
+                <div class="row mb-3">
+                    <div class="col-md-4 offset-md-8">
+                        <label class="form-label">Forma de pago</label>
+                        <select name="payment_method" class="form-select">
+                            <option value="">-- Seleccione --</option>
+                            <option value="Pago físico">Pago físico</option>
+                            <option value="Transferencia">Transferencia</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="mt-4 text-end">
                     <button class="btn btn-outline-secondary me-2" name="emit" value="0">Guardar como pendiente</button>
                     <button id="emitBtn" class="btn btn-dark" name="emit" value="1" disabled>Guardar y Emitir</button>
@@ -111,8 +122,8 @@
             <td>
                 <select name="items[][product_id]" class="form-control product-select">
                     @foreach($products as $p)
-                        @php $pvp = number_format(($p->price ?? 0) * (1 + ($p->tax ?? 0)/100),2); @endphp
-                        <option value="{{ $p->id }}" data-price="{{ $p->price ?? 0 }}" data-tax="{{ $p->tax ?? 0 }}">{{ $p->name }} - ${{ number_format($p->price ?? 0,2) }} (PVP: ${{ $pvp }})</option>
+                        @php $pvp = number_format(($p->price ?? 0) * (1 + ($p->tax_rate ?? 0)/100),2); @endphp
+                        <option value="{{ $p->id }}" data-price="{{ $p->price ?? 0 }}" data-tax="{{ $p->tax_rate ?? 0 }}">{{ $p->name }} - ${{ number_format($p->price ?? 0,2) }} (PVP: ${{ $pvp }})</option>
                     @endforeach
                 </select>
             </td>
@@ -124,7 +135,7 @@
             <td>
                 <select name="items[][tax_rate]" class="form-control">
                     <option value="0">0%</option>
-                    <option value="15">15%</option>
+                    <option value="{{ config('taxes.iva') }}">{{ config('taxes.iva') }}%</option>
                 </select>
             </td>
             <td><button type="button" class="btn btn-danger btn-sm remove-row">X</button></td>
@@ -242,7 +253,10 @@
             const price = row.querySelector('.item-unit-price');
             const tax = row.querySelector('select[name="items[][tax_rate]"]');
 
-            function updateUnitPrice(){
+            // if user manually changes tax, mark it so auto-assignment won't override
+            if(tax){ tax.addEventListener('change', function(){ tax.dataset.userChanged = '1'; }); }
+
+                function updateUnitPrice(){
                 let p = 0;
                 let defaultTax = null;
                 const selected = select.selectedOptions && select.selectedOptions[0];
@@ -251,12 +265,18 @@
                     defaultTax = selected.dataset.tax ?? null;
                 } else {
                     const selData = $(select).select2('data')[0];
-                    if(selData){ p = parseFloat(selData.price || 0); defaultTax = selData.tax ?? null; }
+                    if(selData){ p = parseFloat(selData.price || 0); defaultTax = selData.tax_rate ?? selData.tax ?? null; }
+                    invalidatePaymentIfNeeded();
                 }
-                price.value = (isNaN(p) ? 0 : p).toFixed(2);
-                // Only set default tax on create if there's no explicit value set by the user
-                if(defaultTax !== null && tax && (tax.value === '' || tax.value === null || typeof tax.value === 'undefined')){
-                    // set select value safely and trigger change for select2 if present
+                // If product has a tax > 0, show the gross price (price including tax) in the UI for clarity.
+                if(defaultTax && parseFloat(defaultTax) > 0){
+                    const gross = p * (1 + (parseFloat(defaultTax)/100));
+                    price.value = (isNaN(gross) ? 0 : gross).toFixed(2);
+                } else {
+                    price.value = (isNaN(p) ? 0 : p).toFixed(2);
+                }
+                // Only auto-assign tax for rows that were just added and where the user hasn't changed tax
+                if(defaultTax !== null && tax && row.dataset.new === '1' && !tax.dataset.userChanged){
                     try {
                         if (window.jQuery && $(tax).hasClass('select2-hidden-accessible')) {
                             $(tax).val(defaultTax).trigger('change');
@@ -264,12 +284,15 @@
                             tax.value = defaultTax;
                         }
                     } catch (e) { tax.value = defaultTax; }
+                    // clear the new marker so we don't auto-assign repeatedly
+                    delete row.dataset.new;
                 }
                 updateTotals();
             }
 
             function updateTotals(){
                 computeGlobalTotals();
+                invalidatePaymentIfNeeded();
             }
 
             select.addEventListener('change', updateUnitPrice);
@@ -326,6 +349,8 @@
         addBtn.addEventListener('click', ()=>{
             const clone = document.importNode(template, true);
             tbody.appendChild(clone);
+            // mark new row for auto-assignment behavior
+            tbody.lastElementChild.dataset.new = '1';
             // Activate select2 on the newly added select
                 const selectEl = $(tbody.lastElementChild).find('.product-select');
                 if(!selectEl.hasClass('select2-hidden-accessible')){
@@ -343,6 +368,7 @@
                 }
             // validate button on row change
             attachRowListeners(tbody.lastElementChild);
+            invalidatePaymentIfNeeded();
             validateEmitButton();
         });
 
@@ -351,13 +377,14 @@
             const code = $('#barcodeSearch').val().trim();
             if(!code) return;
             $.get('{{ route('products.search') }}', { q: code }, function(resp){
-                if(resp.results && resp.results.length){
+                    if(resp.results && resp.results.length){
                     const pid = resp.results[0].id;
                     // add new row and select product
                     addBtn.click();
                     const lastRow = tbody.lastElementChild;
                     const sel = lastRow.querySelector('.product-select');
                     $(sel).val(pid).trigger('change');
+                        invalidatePaymentIfNeeded();
                 } else {
                     alert('Producto no encontrado con ese código');
                 }
@@ -368,6 +395,7 @@
             if(e.target.classList.contains('remove-row')){
                 e.target.closest('tr').remove();
                 computeGlobalTotals();
+                invalidatePaymentIfNeeded();
             }
         });
 
@@ -403,6 +431,26 @@
             }
 
             summary.innerHTML = `<p>Subtotal: ${subtotal.toFixed(2)}</p><p>Impuesto: ${taxTotal.toFixed(2)}</p><h4>Total: ${total.toFixed(2)}</h4>`;
+            return total;
+        }
+
+        // If a payment breakdown was previously saved (hidden inputs exist), changing any
+        // article should force the user to re-confirm the payment amounts. This function
+        // shows a small modal instructing the user to re-confirm their payment and removes
+        // existing hidden payment inputs so the form can't be submitted with stale values.
+        function invalidatePaymentIfNeeded(){
+            const hasCash = $('#invoiceForm input[name="cash_amount"]').length > 0;
+            const hasTransfer = $('#invoiceForm input[name="transfer_amount"]').length > 0;
+            if(hasCash || hasTransfer){
+                // Remove existing hidden inputs so stale values aren't submitted
+                $('#invoiceForm input[name="cash_amount"]').remove();
+                $('#invoiceForm input[name="transfer_amount"]').remove();
+                $('#invoiceForm').data('paymentConfirmed', false);
+                // Show modal asking user to re-confirm payment
+                var modalEl = document.getElementById('paymentChangedModal');
+                var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+                modal.show();
+            }
         }
 
             // initialize select2 on any pre-existing product-select selects
@@ -441,15 +489,7 @@
                     const taxSel = $(this).find('select[name="items[][tax_rate]"]');
                     if(taxSel.length){ taxSel.attr('name', `items[${i}][tax_rate]`); }
                 });
-                // Debug - log tax_rate values in the form payload (temporary)
-                try {
-                    const taxes = [];
-                    $('#invoiceForm #items-table tbody tr').each(function(){
-                        const taxVal = $(this).find('select[name="items[][tax_rate]"]').val();
-                        taxes.push(taxVal);
-                    });
-                    console.log('DEBUG invoiceForm tax_rate values:', taxes);
-                } catch (e) { console.log('DEBUG invoiceForm tax_rate logging error', e); }
+                // removed debug logging
                 // Client-side validation: ensure either a selected customer id or an identification value is present
                 const hasCid = $('#invoiceForm #selected_customer_id').length > 0;
                 const identificationVal = ($('#c_identification').val() || '').trim();
@@ -502,6 +542,81 @@
             });
             $('#emitBtn').prop('disabled', !ok);
         }
+
+        // Payment modal handling: open when payment method selected or when emitting without payment details
+        function openPaymentModalWithDefaults(){
+            const total = computeGlobalTotals();
+            const totalFixed = parseFloat(total).toFixed(2);
+            $('#payment_total_display').val(totalFixed);
+            const pm = $('select[name="payment_method"]').val();
+            if(pm === 'Pago físico'){
+                $('#payment_cash').val(totalFixed);
+                $('#payment_transfer').val((0).toFixed(2));
+            } else if(pm === 'Transferencia'){
+                $('#payment_cash').val((0).toFixed(2));
+                $('#payment_transfer').val(totalFixed);
+            } else {
+                $('#payment_cash').val((0).toFixed(2));
+                $('#payment_transfer').val((0).toFixed(2));
+            }
+            $('#payment_error').addClass('d-none');
+            var pmModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+            pmModal.show();
+        }
+
+        // Open modal when payment method changes
+        $(document).on('change', 'select[name="payment_method"]', function(){
+            const val = $(this).val();
+            if(val && val !== ''){
+                openPaymentModalWithDefaults();
+            }
+        });
+
+        // Save payment from modal into hidden inputs
+        $('#paymentSaveBtn').on('click', function(e){
+            e.preventDefault();
+            const total = parseFloat(computeGlobalTotals() || 0).toFixed(2);
+            const cash = parseFloat($('#payment_cash').val() || 0).toFixed(2);
+            const transfer = parseFloat($('#payment_transfer').val() || 0).toFixed(2);
+            const sum = (parseFloat(cash) + parseFloat(transfer)).toFixed(2);
+            if(parseFloat(sum) !== parseFloat(total)){
+                $('#payment_error').removeClass('d-none');
+                return;
+            }
+            // create or set hidden inputs
+            if(!$('#invoiceForm input[name="cash_amount"]').length){
+                $('<input>').attr({type:'hidden', name:'cash_amount', value: cash}).appendTo('#invoiceForm');
+            } else { $('#invoiceForm input[name="cash_amount"]').val(cash); }
+            if(!$('#invoiceForm input[name="transfer_amount"]').length){
+                $('<input>').attr({type:'hidden', name:'transfer_amount', value: transfer}).appendTo('#invoiceForm');
+            } else { $('#invoiceForm input[name="transfer_amount"]').val(transfer); }
+
+            // mark payment as confirmed in the client so we can detect later changes
+            $('#invoiceForm').data('paymentConfirmed', true);
+
+            // close modal
+            var modalEl = document.getElementById('paymentModal');
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            if(modal) modal.hide();
+        });
+
+        // If user clicks Emit and payment method selected but hidden payment inputs missing, open modal
+        $('#emitBtn').on('click', function(e){
+            const pm = $('select[name="payment_method"]').val();
+            if(pm && $('#invoiceForm input[name="cash_amount"]').length === 0 && $('#invoiceForm input[name="transfer_amount"]').length === 0){
+                e.preventDefault();
+                openPaymentModalWithDefaults();
+            }
+        });
+
+        // Reconfirm button in the "payment changed" modal: open the payment modal again
+        $(document).on('click', '#reconfirmPaymentBtn', function(e){
+            e.preventDefault();
+            var changedEl = document.getElementById('paymentChangedModal');
+            var inst = bootstrap.Modal.getInstance(changedEl);
+            if(inst) inst.hide();
+            openPaymentModalWithDefaults();
+        });
     });
     </script>
     @endpush
@@ -557,5 +672,52 @@
         </div>
     </div>
 
+    <!-- Payment Modal -->
+    <div class="modal fade" id="paymentModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">Registrar Desglose de Pago</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Total factura</label>
+                        <input id="payment_total_display" class="form-control" readonly />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Efectivo (cash_amount)</label>
+                        <input id="payment_cash" name="payment_cash_ui" type="number" class="form-control" step="0.01" min="0" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Transferencia (transfer_amount)</label>
+                        <input id="payment_transfer" name="payment_transfer_ui" type="number" class="form-control" step="0.01" min="0" />
+                    </div>
+                    <div id="payment_error" class="text-danger small d-none">La suma de efectivo y transferencia debe ser igual al total de la factura.</div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-dark" id="paymentSaveBtn">Guardar pago</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Payment Changed Modal (forces reconfirm) -->
+    <div class="modal fade" id="paymentChangedModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">Cambios en artículos</h5>
+                </div>
+                <div class="modal-body">
+                    <p>Se detectaron cambios en los artículos después de ingresar un desglose de pago. Debe volver a confirmar los montos de pago antes de emitir la factura.</p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button class="btn btn-dark" id="reconfirmPaymentBtn">Reconfirmar pago</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection

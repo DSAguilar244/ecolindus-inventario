@@ -151,10 +151,10 @@
 
                             <div class="col-md-3">
                                 <div class="form-group">
-                                    <label for="tax" class="form-label">Impuesto</label>
-                                    <select name="tax" id="tax" class="form-select">
-                                        <option value="0" {{ old('tax') == '0' ? 'selected' : '' }}>0%</option>
-                                        <option value="15" {{ old('tax') == '15' ? 'selected' : '' }}>15%</option>
+                                    <label for="tax_rate" class="form-label">Impuesto</label>
+                                    <select name="tax_rate" id="tax_rate" class="form-select">
+                                        <option value="0" {{ old('tax_rate') == '0' ? 'selected' : '' }}>0%</option>
+                                        <option value="15" {{ old('tax_rate') == '15' ? 'selected' : '' }}>15%</option>
                                     </select>
                                 </div>
                             </div>

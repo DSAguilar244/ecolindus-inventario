@@ -34,13 +34,13 @@ Route::middleware('auth')->group(function () {
     Route::resource('products', ProductController::class);
     Route::get('/products/export/pdf', [ProductController::class, 'exportPdf'])->name('products.export.pdf');
 
-    // Gestión de proveedores
-    Route::resource('suppliers', SupplierController::class);
-    Route::get('/suppliers/export/pdf', [SupplierController::class, 'exportPdf'])->name('suppliers.export.pdf');
+    // Gestión de proveedores (desactivada)
+    // Route::resource('suppliers', SupplierController::class);
+    // Route::get('/suppliers/export/pdf', [SupplierController::class, 'exportPdf'])->name('suppliers.export.pdf');
 
-    // Gestión de movimientos de inventario
-    Route::resource('movements', InventoryMovementController::class);
-    Route::get('/movements/export/pdf', [InventoryMovementController::class, 'exportPdf'])->name('movements.export.pdf');
+    // Gestión de movimientos de inventario (desactivada)
+    // Route::resource('movements', InventoryMovementController::class);
+    // Route::get('/movements/export/pdf', [InventoryMovementController::class, 'exportPdf'])->name('movements.export.pdf');
 
     // Gestión de facturas / ventas
     Route::resource('invoices', App\Http\Controllers\InvoiceController::class);
@@ -49,6 +49,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/invoices/export/pdf', [App\Http\Controllers\InvoiceController::class, 'exportPdf'])->name('invoices.export.pdf');
     Route::get('/invoices/{invoice}/print', [App\Http\Controllers\InvoiceController::class, 'print'])->name('invoices.print');
     Route::post('/invoices/{invoice}/reopen', [App\Http\Controllers\InvoiceController::class, 'reopen'])->name('invoices.reopen');
+    Route::patch('/invoices/{invoice}/update-number', [App\Http\Controllers\InvoiceController::class, 'updateInvoiceNumber'])->name('invoices.updateNumber');
+    
+    // Invoice payment management
+    Route::post('/invoices/{invoice}/payments', [App\Http\Controllers\InvoicePaymentController::class, 'store'])->name('invoice_payments.store');
+    Route::get('/invoices/{invoice}/payments/edit', [App\Http\Controllers\InvoicePaymentController::class, 'edit'])->name('invoice_payments.edit');
+
+    // Cash session management
+    Route::post('/cash-sessions/open', [App\Http\Controllers\CashSessionController::class, 'open'])->name('cash_sessions.open');
+    Route::post('/cash-sessions/close', [App\Http\Controllers\CashSessionController::class, 'close'])->name('cash_sessions.close');
+    Route::get('/cash-sessions/summary', [App\Http\Controllers\CashSessionController::class, 'summary'])->name('cash_sessions.summary');
 
     // Perfil de usuario
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

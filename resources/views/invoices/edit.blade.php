@@ -55,8 +55,8 @@
                                 <td>
                                     <select name="items[][product_id]" class="form-control product-select">
                                         @foreach($products as $p)
-                                            @php $pvp = number_format(($p->price ?? 0) * (1 + ($p->tax ?? 0)/100),2); @endphp
-                                            <option value="{{ $p->id }}" data-price="{{ $p->price ?? 0 }}" data-tax="{{ $p->tax ?? 0 }}" {{ ($it->product_id === $p->id) ? 'selected' : '' }}>{{ $p->name }} - ${{ number_format($p->price ?? 0,2) }} (PVP: ${{ $pvp }})</option>
+                                                @php $pvp = number_format(($p->price ?? 0) * (1 + ($p->tax_rate ?? 0)/100),2); @endphp
+                                                    <option value="{{ $p->id }}" data-price="{{ $p->price ?? 0 }}" data-tax="{{ $p->tax_rate ?? 0 }}" {{ ($it->product_id === $p->id) ? 'selected' : '' }}>{{ $p->name }} - ${{ number_format($p->price ?? 0,2) }} (PVP: ${{ $pvp }})</option>
                                         @endforeach
                                     </select>
                                 </td>
@@ -68,7 +68,7 @@
                                 <td>
                                     <select name="items[][tax_rate]" class="form-control">
                                         <option value="0" {{ ($it->tax_rate === 0) ? 'selected' : '' }}>0%</option>
-                                        <option value="15" {{ ($it->tax_rate === 15) ? 'selected' : '' }}>15%</option>
+                                        <option value="{{ config('taxes.iva') }}" {{ ($it->tax_rate === (int)config('taxes.iva')) ? 'selected' : '' }}>{{ config('taxes.iva') }}%</option>
                                     </select>
                                 </td>
                                 <td><button type="button" class="btn btn-danger btn-sm remove-row">X</button></td>
@@ -106,8 +106,8 @@
             <td>
                 <select name="items[][product_id]" class="form-control product-select">
                     @foreach($products as $p)
-                        @php $pvp = number_format(($p->price ?? 0) * (1 + ($p->tax ?? 0)/100),2); @endphp
-                        <option value="{{ $p->id }}" data-price="{{ $p->price ?? 0 }}" data-tax="{{ $p->tax ?? 0 }}">{{ $p->name }} - ${{ number_format($p->price ?? 0,2) }} (PVP: ${{ $pvp }})</option>
+                        @php $pvp = number_format(($p->price ?? 0) * (1 + ($p->tax_rate ?? 0)/100),2); @endphp
+                        <option value="{{ $p->id }}" data-price="{{ $p->price ?? 0 }}" data-tax="{{ $p->tax_rate ?? 0 }}">{{ $p->name }} - ${{ number_format($p->price ?? 0,2) }} (PVP: ${{ $pvp }})</option>
                     @endforeach
                 </select>
             </td>
@@ -116,7 +116,7 @@
             <td>
                 <select name="items[][tax_rate]" class="form-control">
                     <option value="0">0%</option>
-                    <option value="15">15%</option>
+                    <option value="{{ config('taxes.iva') }}">{{ config('taxes.iva') }}%</option>
                 </select>
             </td>
             <td><button type="button" class="btn btn-danger btn-sm remove-row">X</button></td>
@@ -223,6 +223,9 @@
             const price = row.querySelector('.item-unit-price');
             const tax = row.querySelector('select[name="items[][tax_rate]"]');
 
+            // if user manually changes tax, mark it so we don't override
+            if(tax){ tax.addEventListener('change', function(){ tax.dataset.userChanged = '1'; }); }
+
             function updateUnitPrice(){
                 let p = 0;
                 let defaultTax = null;
@@ -235,12 +238,17 @@
                     const selData = $(select).select2('data')[0];
                     if(selData){
                         p = parseFloat(selData.price || 0);
-                        defaultTax = selData.tax ?? null;
+                        defaultTax = selData.tax_rate ?? selData.tax ?? null;
                     }
                 }
-                price.value = (isNaN(p) ? 0 : p).toFixed(2);
-                // Only set default tax on update if there's no explicit value set by the user
-                if(defaultTax !== null && tax && (tax.value === '' || tax.value === null || typeof tax.value === 'undefined')){
+                if(defaultTax && parseFloat(defaultTax) > 0){
+                    const gross = p * (1 + (parseFloat(defaultTax)/100));
+                    price.value = (isNaN(gross) ? 0 : gross).toFixed(2);
+                } else {
+                    price.value = (isNaN(p) ? 0 : p).toFixed(2);
+                }
+                // Only auto-assign tax for rows that were just added and user hasn't changed tax
+                if(defaultTax !== null && tax && row.dataset.new === '1' && !tax.dataset.userChanged){
                     try {
                         if (window.jQuery && $(tax).hasClass('select2-hidden-accessible')) {
                             $(tax).val(defaultTax).trigger('change');
@@ -248,6 +256,7 @@
                             tax.value = defaultTax;
                         }
                     } catch (e) { tax.value = defaultTax; }
+                    delete row.dataset.new;
                 }
                 updateTotals();
             }
@@ -301,6 +310,8 @@
         addBtn.addEventListener('click', ()=>{
             const clone = document.importNode(template, true);
             tbody.appendChild(clone);
+                // mark new row so auto-assignment will apply only to this row
+                tbody.lastElementChild.dataset.new = '1';
                 const selectEl = $(tbody.lastElementChild).find('.product-select');
                 if(!selectEl.hasClass('select2-hidden-accessible')){
                     selectEl.select2({
@@ -423,15 +434,7 @@
                 const taxSel = $(this).find('select[name="items[][tax_rate]"]');
                 if(taxSel.length){ taxSel.attr('name', `items[${i}][tax_rate]`); }
             });
-            // Debug - log tax_rate values in the form payload (temporary)
-            try {
-                const taxes = [];
-                $('#invoiceForm #items-table tbody tr').each(function(){
-                    const taxVal = $(this).find('select[name="items[][tax_rate]"]').val();
-                    taxes.push(taxVal);
-                });
-                console.log('DEBUG invoiceEditForm tax_rate values:', taxes);
-            } catch (e) { console.log('DEBUG invoiceEditForm tax_rate logging error', e); }
+            // removed debug logging
             // Client-side validation: ensure either a selected customer id or an identification value is present
             const hasCid = $('#invoiceForm #selected_customer_id').length > 0;
             const identificationVal = ($('#c_identification').val() || '').trim();

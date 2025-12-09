@@ -16,7 +16,7 @@ class AdminEditEmittedInvoiceTest extends TestCase
     public function test_non_admin_cannot_edit_emitted_invoice()
     {
         $user = User::factory()->create();
-        $product = Product::factory()->create(['price' => 10, 'stock' => 10, 'tax' => 0]);
+        $product = Product::factory()->create(['price' => 10, 'stock' => 10, 'tax_rate' => 0]);
 
         // Create an emitted invoice with an item
         $invoice = Invoice::factory()->create(['user_id' => $user->id, 'status' => Invoice::STATUS_EMITIDA]);
@@ -33,7 +33,7 @@ class AdminEditEmittedInvoiceTest extends TestCase
     public function test_admin_can_edit_emitted_invoice_and_stock_adjusts()
     {
         $admin = User::factory()->create(['is_admin' => true]);
-        $product = Product::factory()->create(['price' => 10, 'stock' => 10, 'tax' => 0]);
+        $product = Product::factory()->create(['price' => 10, 'stock' => 10, 'tax_rate' => 0]);
 
         // Create an emitted invoice with an item for quantity 2
         $customer = \App\Models\Customer::factory()->create();

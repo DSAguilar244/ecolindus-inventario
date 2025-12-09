@@ -20,7 +20,7 @@ class ProductSearchTest extends TestCase
         $this->actingAs($user)
             ->getJson(route('products.search', ['q' => 'Agua']))
             ->assertOk()
-            ->assertJsonStructure(['results' => [['id', 'text', 'price', 'tax', 'code']]])
+            ->assertJsonStructure(['results' => [['id', 'text', 'price', 'tax_rate', 'code']]])
             ->assertJsonCount(2, 'results');
     }
 }

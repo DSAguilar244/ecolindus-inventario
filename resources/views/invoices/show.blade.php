@@ -51,7 +51,14 @@
                 <div class="col-md-6 text-end">
                     <h6 class="mb-1">Fecha</h6>
                     <p class="mb-0">{{ $invoice->date->format('Y-m-d H:i') }}</p>
-                    <small class="text-muted"># {{ $invoice->invoice_number }}</small>
+                    <div class="d-flex align-items-center justify-content-end gap-2">
+                        <small class="text-muted"># {{ $invoice->invoice_number }}</small>
+                        @if(auth()->check() && (auth()->user()->can('edit-emitted-invoice') || $invoice->status === \App\Models\Invoice::STATUS_PENDIENTE))
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editInvoiceNumberModal">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        @endif
+                    </div>
                 </div>
             </div>
 
@@ -220,5 +227,31 @@
         });
     </script>
     @endpush
+
+    <!-- Edit Invoice Number Modal -->
+    <div class="modal fade" id="editInvoiceNumberModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form action="{{ route('invoices.updateNumber', $invoice) }}" method="POST">
+                    @csrf
+                    @method('PATCH')
+                    <div class="modal-header border-0">
+                        <h5 class="modal-title">Editar Número de Factura</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="invoiceNumber" class="form-label">Número de Factura</label>
+                            <input type="text" name="invoice_number" id="invoiceNumber" class="form-control" value="{{ $invoice->invoice_number }}" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Actualizar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection

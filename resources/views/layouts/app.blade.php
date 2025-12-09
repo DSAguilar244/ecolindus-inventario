@@ -162,16 +162,18 @@
                     </a>
                 </li>
                 @endcan
-                <li class="nav-item">
+                {{-- Proveedores desactivados --}}
+                {{-- <li class="nav-item">
                     <a class="nav-link d-flex align-items-center" href="{{ route('suppliers.index') }}">
                         <i class="bi bi-truck me-1"></i> Proveedores
                     </a>
-                </li>
-                <li class="nav-item">
+                </li> --}}
+                {{-- Movimientos desactivados --}}
+                {{-- <li class="nav-item">
                     <a class="nav-link d-flex align-items-center" href="{{ route('movements.index') }}">
                         <i class="bi bi-arrow-left-right me-1"></i> Movimientos
                     </a>
-                </li>
+                </li> --}}
                 <li class="nav-item">
                     <a class="nav-link d-flex align-items-center" href="{{ route('invoices.index') }}">
                         <i class="bi bi-receipt-cutoff me-1"></i> Ventas
