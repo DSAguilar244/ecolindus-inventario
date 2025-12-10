@@ -112,13 +112,13 @@
                         <div class="col-md-6">
                             <div class="p-3">
                                 <h6 class="text-muted">Facturas Emitidas</h6>
-                                <h3>${data.total_invoices}</h3>
+                                <h3 data-testid="invoice-count">${data.invoices_count}</h3>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="p-3">
                                 <h6 class="text-muted">Total</h6>
-                                <h3>$${parseFloat(data.total_amount).toFixed(2)}</h3>
+                                <h3 data-testid="total-amount">$${parseFloat(data.totals.total_invoices).toFixed(2)}</h3>
                             </div>
                         </div>
                     </div>
@@ -127,13 +127,13 @@
                         <div class="col-md-6">
                             <div class="p-3 bg-light rounded">
                                 <h6 class="text-muted">En Efectivo</h6>
-                                <h4 class="text-success">$${parseFloat(data.total_cash).toFixed(2)}</h4>
+                                <h4 class="text-success" data-testid="total-cash">$${parseFloat(data.totals.total_cash).toFixed(2)}</h4>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="p-3 bg-light rounded">
                                 <h6 class="text-muted">En Transferencia</h6>
-                                <h4 class="text-info">$${parseFloat(data.total_transfer).toFixed(2)}</h4>
+                                <h4 class="text-info" data-testid="total-transfer">$${parseFloat(data.totals.total_transfer).toFixed(2)}</h4>
                             </div>
                         </div>
                     </div>
