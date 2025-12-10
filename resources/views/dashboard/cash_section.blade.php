@@ -60,6 +60,22 @@
             </div>
         </div>
     </div>
+    @else
+    <div class="col-lg-8">
+        <div class="card bg-white shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-receipt me-2"></i>Resumen de Caja
+                </h5>
+                <div class="text-center">
+                    <p class="text-muted mb-3">
+                        <i class="bi bi-info-circle"></i> Caja no abierta
+                    </p>
+                    <p class="text-secondary small">Abre una caja para ver el resumen de facturas y pagos.</p>
+                </div>
+            </div>
+        </div>
+    </div>
     @endif
     
     <!-- Close Confirmation Modal -->
@@ -112,7 +128,7 @@
                         <div class="col-md-6">
                             <div class="p-3">
                                 <h6 class="text-muted">Facturas Emitidas</h6>
-                                <h3 data-testid="invoice-count">${data.invoices_count}</h3>
+                                <h3 data-testid="invoice-count">${data.totals?.invoices_count ?? 0}</h3>
                             </div>
                         </div>
                         <div class="col-md-6">
