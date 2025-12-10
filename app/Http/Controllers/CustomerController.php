@@ -44,9 +44,6 @@ class CustomerController extends Controller
             });
         }
         $customers = $query->orderBy('first_name')->get();
-        if (app()->environment('testing')) {
-            Log::debug('Customers CSV export result', ['names' => $customers->pluck('first_name')->toArray(), 'q' => $request->get('q')]);
-        }
         // Use an export-friendly view (no heavy layout) to produce a clean PDF
         $pdf = Pdf::loadView('customers.export_pdf', compact('customers'));
         // set some reasonable options for output

@@ -59,6 +59,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/cash-sessions/open', [App\Http\Controllers\CashSessionController::class, 'open'])->name('cash_sessions.open');
     Route::post('/cash-sessions/close', [App\Http\Controllers\CashSessionController::class, 'close'])->name('cash_sessions.close');
     Route::get('/cash-sessions/summary', [App\Http\Controllers\CashSessionController::class, 'summary'])->name('cash_sessions.summary');
+    Route::get('/cash-sessions/history', [App\Http\Controllers\CashSessionController::class, 'history'])->name('cash_sessions.history');
 
     // Perfil de usuario
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

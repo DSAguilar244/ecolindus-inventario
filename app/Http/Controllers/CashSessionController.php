@@ -154,4 +154,13 @@ class CashSessionController extends Controller
             'invoices' => $invoiceList,
         ]);
     }
+
+    public function history()
+    {
+        $sessions = CashSession::with('user')
+            ->orderByDesc('opened_at')
+            ->paginate(15);
+
+        return view('cash_sessions.history', compact('sessions'));
+    }
 }

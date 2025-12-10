@@ -238,20 +238,6 @@ class InvoiceController extends Controller
 
     public function update(StoreInvoiceRequest $request, Invoice $invoice)
     {
-        if (app()->environment('testing')) {
-            try {
-                
-                \Illuminate\Support\Facades\Log::debug('CSRF Debug - invoice.update', [
-                    'headers_x_csrf' => $request->headers->get('X-CSRF-TOKEN'),
-                    'headers_x_csrf_header' => $request->headers->get('X-XSRF-TOKEN'),
-                    'input__token' => $request->input('_token'),
-                    'session_token' => session()->token(),
-                    'session_all' => array_keys(session()->all()),
-                ]);
-            } catch (\Throwable $e) {
-                // ignore logging failures during test debug
-            }
-        }
         if ($invoice->status !== Invoice::STATUS_PENDIENTE) {
             // allow admins to update emitted invoices for corrections (ensure stock adjustments)
             if (! Auth::check() || ! Gate::allows('edit-emitted-invoice')) {
@@ -466,7 +452,6 @@ class InvoiceController extends Controller
                 }
             }
             // Insert audit log BEFORE deleting the invoice so FK constraints pass
-            Log::debug('Creating audit log for forceDelete', ['user' => Auth::id(), 'invoice' => $invoice->id, 'user_exists' => DB::table('users')->where('id', Auth::id())->exists(), 'invoice_exists' => DB::table('invoices')->where('id', $invoice->id)->exists()]);
             AuditLog::create([
                 'user_id' => Auth::id(),
                 'invoice_id' => $invoice->id,

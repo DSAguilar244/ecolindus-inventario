@@ -43,6 +43,10 @@
                         </button>
                     </form>
                 @endif
+                <hr>
+                <a href="{{ route('cash_sessions.history') }}" class="btn btn-outline-secondary w-100 btn-sm">
+                    <i class="bi bi-clock-history me-1"></i>Historial de Cajas
+                </a>
             </div>
         </div>
     </div>
