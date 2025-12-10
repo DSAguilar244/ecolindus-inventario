@@ -96,7 +96,13 @@ COMPANY_EMAIL=contacto@ecolindus.com
 1. Crear factura (con items y totales)
 2. Editar número de factura si es necesario (botón "Editar Numeración")
 3. Registrar pago: Efectivo + Transferencia (modal de pago)
-4. Imprimir PDF: incluye RUC, items, totales y desglose de pago
+4. Confirmar emisión: Al presionar "Guardar y Emitir":
+   - Si tiene pago seleccionado sin confirmar desglose → abre modal de pago
+   - Si todo está validado → muestra modal de confirmación (#confirmEmitModal)
+   - Modal muestra cliente, total, método de pago y desglose (si aplica)
+   - Usuario confirma: "Sí, emitir" → envía formulario con emit=1
+   - O cancela sin emitir
+5. Imprimir PDF: incluye RUC, items, totales y desglose de pago
 
 ### Flujo de Caja
 1. Abrir sesión: usuario ingresa monto inicial

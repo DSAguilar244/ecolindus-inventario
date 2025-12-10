@@ -110,7 +110,7 @@
 
                 <div class="mt-4 text-end">
                     <button class="btn btn-outline-secondary me-2" name="emit" value="0">Guardar como pendiente</button>
-                    <button id="emitBtn" class="btn btn-dark" name="emit" value="1" disabled>Guardar y Emitir</button>
+                    <button type="button" id="emitBtn" class="btn btn-dark" disabled>Guardar y Emitir</button>
                     <a href="{{ route('invoices.index') }}" class="btn btn-link">Cancelar</a>
                 </div>
             </form>
@@ -564,6 +564,34 @@
             pmModal.show();
         }
 
+        function showConfirmEmitModal(){
+            const total = computeGlobalTotals();
+            const totalFixed = parseFloat(total).toFixed(2);
+            const pm = $('select[name="payment_method"]').val();
+            const custName = ($('#c_first_name').val() || '') + ' ' + ($('#c_last_name').val() || '');
+            
+            let details = `
+                <strong>Cliente:</strong> ${custName.trim()}<br/>
+                <strong>Total:</strong> $${totalFixed}<br/>
+            `;
+            
+            if(pm){
+                details += `<strong>Método de Pago:</strong> ${pm}<br/>`;
+            }
+            
+            if(pm && pm !== ''){
+                const cash = $('#invoiceForm input[name="cash_amount"]').val() || '0';
+                const transfer = $('#invoiceForm input[name="transfer_amount"]').val() || '0';
+                if(parseFloat(cash) > 0 || parseFloat(transfer) > 0){
+                    details += `<strong>Desglose:</strong> Efectivo: $${parseFloat(cash).toFixed(2)}, Transferencia: $${parseFloat(transfer).toFixed(2)}<br/>`;
+                }
+            }
+            
+            $('#confirmEmitDetails').html(details);
+            var modal = new bootstrap.Modal(document.getElementById('confirmEmitModal'));
+            modal.show();
+        }
+
         // Open modal when payment method changes
         $(document).on('change', 'select[name="payment_method"]', function(){
             const val = $(this).val();
@@ -600,12 +628,17 @@
             if(modal) modal.hide();
         });
 
-        // If user clicks Emit and payment method selected but hidden payment inputs missing, open modal
+        // If user clicks Emit: check payment or show confirmation modal
         $('#emitBtn').on('click', function(e){
+            e.preventDefault();
             const pm = $('select[name="payment_method"]').val();
+            
+            // If payment method is selected but payment inputs are missing, open payment modal first
             if(pm && $('#invoiceForm input[name="cash_amount"]').length === 0 && $('#invoiceForm input[name="transfer_amount"]').length === 0){
-                e.preventDefault();
                 openPaymentModalWithDefaults();
+            } else {
+                // Show confirmation modal for emission
+                showConfirmEmitModal();
             }
         });
 
@@ -616,6 +649,18 @@
             var inst = bootstrap.Modal.getInstance(changedEl);
             if(inst) inst.hide();
             openPaymentModalWithDefaults();
+        });
+
+        // Confirm Emit button: submit the form with emit flag
+        $(document).on('click', '#confirmEmitBtn', function(e){
+            e.preventDefault();
+            // Add hidden emit input to form and submit
+            if(!$('#invoiceForm input[name="emit"]').length){
+                $('<input>').attr({type:'hidden', name:'emit', value:'1'}).appendTo('#invoiceForm');
+            } else {
+                $('#invoiceForm input[name="emit"]').val('1');
+            }
+            $('#invoiceForm').submit();
         });
     });
     </script>
@@ -715,6 +760,28 @@
                 </div>
                 <div class="modal-footer border-0">
                     <button class="btn btn-dark" id="reconfirmPaymentBtn">Reconfirmar pago</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Emit Modal -->
+    <div class="modal fade" id="confirmEmitModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">Confirmar Emisión de Factura</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de que deseas emitir esta factura?</p>
+                    <div id="confirmEmitDetails" class="alert alert-info small">
+                        <!-- Details will be populated by JS -->
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="confirmEmitBtn" class="btn btn-dark">Sí, emitir</button>
                 </div>
             </div>
         </div>
