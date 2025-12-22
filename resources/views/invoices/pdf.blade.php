@@ -5,168 +5,183 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>{{ $invoice->invoice_number }}</title>
     <style>
-        /* Page setup for DomPDF - A4 with optimized margins for content */
         @page { size: A4; margin: 12mm 12mm; }
-        html, body { margin: 0; padding: 0; }
-        /* Embed DejaVu Sans explicitly from vendor (absolute path) */
-        /* Optional: If needed, convert to base64 and use data: URL instead of file:// for cross-platform compatibility */
-        /* To enable base64, generate with: base64 -w 0 vendor/dompdf/dompdf/lib/fonts/DejaVuSans.ttf > font.b64 */
-        /* Then replace src: url("file://...") with src: url("data:application/octet-stream;base64,...") */
-        @font-face {
-            font-family: 'DejaVuEmbedded';
-            src: url("file://{{ realpath(base_path('vendor/dompdf/dompdf/lib/fonts/DejaVuSans.ttf')) }}") format('truetype');
-            font-weight: normal;
-            font-style: normal;
+        * { margin: 0; padding: 0; }
+        body { 
+            font-family: 'DejaVu Sans', sans-serif; 
+            font-size: 11px; 
+            line-height: 1.4; 
+            color: #222; 
         }
-        @font-face {
-            font-family: 'DejaVuEmbedded';
-            src: url("file://{{ realpath(base_path('vendor/dompdf/dompdf/lib/fonts/DejaVuSans-Bold.ttf')) }}") format('truetype');
-            font-weight: bold;
-            font-style: normal;
+        table { width: 100%; border-collapse: collapse; }
+        th { 
+            background: #f0f0f0; 
+            padding: 6px; 
+            border: 1px solid #999; 
+            text-align: left;
+            font-size: 10px; 
+            font-weight: bold; 
         }
-        body { font-family: 'DejaVuEmbedded', 'DejaVu Sans', sans-serif; font-size: 11px; line-height: 1.4; color: #222; }
-
-        /* Header / Footer: use flow layout (avoid position:fixed for better DomPDF compatibility) */
-        .header { display: block; width: 100%; padding: 4px 0; border-bottom: 1px solid #ddd; margin-bottom: 6px; }
-        .footer { display: block; width: 100%; padding: 4px 0; border-top: 1px solid #ddd; font-size: 9px; color: #666; margin-top: 6px; }
-
-        /* Content area */
-        .content { margin-top: 0; margin-bottom: 0; padding: 0; }
-
-        /* Logo styling - scales well in PDF */
-        .logo-cell img { max-width: 150px; height: auto; display: block; }
-
-        h2 { font-size: 13px; margin: 3px 0 6px 0; font-weight: bold; }
-        .meta { margin: 0 0 6px 0; font-size: 11px; }
+        td { padding: 4px; }
+        .border-cell { border: 1px solid #ccc; }
         .right { text-align: right; }
-
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; word-wrap: break-word; }
-        thead { display: table-header-group; }
-        thead th { background: #f0f0f0; padding: 4px; border: 1px solid #999; font-size: 10px; font-weight: bold; }
-        td, th { border: 1px solid #ccc; padding: 4px; vertical-align: middle; }
-        tbody tr { page-break-inside: avoid; }
-        tbody td { font-size: 10px; }
-
-        .totals { margin-top: 6px; width: 100%; }
-        .totals td { border: none; padding: 3px 4px; font-size: 10px; }
-
-        /* Avoid splitting the totals box */
-        .totals-wrap { display: block; width: 38%; page-break-inside: avoid; margin-left: auto; }
-
-        /* Small helpers */
-        .small { font-size: 10px; color: #555; }
+        .header-table { border: none; margin-bottom: 12px; }
+        .header-table td { border: none; padding: 0; }
+        .invoice-box {
+            border: 2px solid #333;
+            background: #f9f9f9;
+            padding: 10px;
+            display: inline-block;
+        }
+        .invoice-number {
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        .section-title {
+            font-size: 10px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 8px;
+            margin-bottom: 4px;
+        }
+        .items-table th { font-size: 10px; }
+        .items-table td { font-size: 10px; }
+        .totals-table { width: 40%; margin-left: auto; margin-top: 12px; }
+        .totals-table tr td { border: none; padding: 4px 6px; }
+        .totals-label { font-size: 10px; }
+        .totals-value { text-align: right; font-weight: bold; font-size: 10px; }
+        .total-row td { border-top: 2px solid #333; padding-top: 6px; padding-bottom: 6px; }
+        .total-row .totals-label { font-size: 11px; font-weight: bold; }
+        .total-row .totals-value { font-size: 12px; font-weight: bold; }
+        .payment-detail { font-size: 9px; color: #666; }
+        hr { border: none; border-top: 1px solid #ddd; margin: 8px 0; }
+        .footer { text-align: center; font-size: 9px; color: #999; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <div class="content">
-        <div class="header">
-            <table style="width:100%; border:none; border-collapse:collapse;">
-                <tr>
-                    <td style="vertical-align:top; padding:0; border:none;" class="logo-cell">
-                        @php $logoPath = public_path('images/ecolindus-logo.png'); @endphp
-                        @if(file_exists($logoPath))
-                            <img src="file://{{ $logoPath }}" alt="ECOLINDUS Logo">
-                        @else
-                            <strong style="font-size:12px; display:block; margin-bottom:2px;">{{ config('company.name', 'ECOLINDUS') }}</strong>
-                            <div class="small">RUC: {{ config('company.ruc', '---') }}</div>
-                        @endif
-                    </td>
-                    <td style="vertical-align:top; padding:0; border:none; text-align:right;">
-                        <div class="small">Factura: <strong>{{ $invoice->invoice_number }}</strong></div>
-                        <div class="small">Fecha: {{ optional($invoice->date)->format('Y-m-d') ?? optional($invoice->created_at)->format('Y-m-d') ?? '' }}</div>
-                    </td>
-                </tr>
-            </table>
-        </div>
-        <h2>Factura {{ $invoice->invoice_number }}</h2>
-
-        <p class="meta">Cliente: {{ optional($invoice->customer)->first_name }} {{ optional($invoice->customer)->last_name }} &middot; {{ optional($invoice->customer)->identification }}</p>
-        @if(optional($invoice->customer)->address)
-            <p class="meta">Dirección: {{ optional($invoice->customer)->address }}</p>
-        @endif
-        @if($invoice->payment_method)
-            <p class="meta">Forma de pago: {{ $invoice->payment_method }}</p>
-        @endif
-
-        <table>
-            <thead>
-                <tr>
-                    <th style="width:45%">Producto</th>
-                    <th style="width:12%" class="right">Cantidad</th>
-                    <th style="width:14%" class="right">Precio</th>
-                    <th style="width:14%" class="right">Impuesto</th>
-                    <th style="width:15%" class="right">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($invoice->items as $item)
-                <tr>
-                    <td>{{ optional($item->product)->name }}</td>
-                    <td class="right">{{ $item->quantity }}</td>
-                    @php
-                        $taxRate = $item->tax_rate ?? 0;
-                        // Display unit price including tax for presentation when tax applies
-                        $displayUnit = ($taxRate > 0) ? ($item->unit_price * (1 + ($taxRate/100))) : $item->unit_price;
-                        $lineTax = ($taxRate/100) * $item->line_total;
-                    @endphp
-                    <td class="right">{{ number_format($displayUnit,2) }}</td>
-                    <td class="right">{{ $item->tax_rate }}% ({{ number_format($lineTax,2) }})</td>
-                    <td class="right">{{ number_format($item->line_total + $lineTax,2) }}</td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-
-        <div style="margin-top:8px; width:100%;">
-            <div class="totals-wrap">
-            <table class="totals-table" style="width:100%; border:none; border-collapse:collapse;">
-                <tr>
-                    <td style="border:none; padding:4px 6px;" class="small">Subtotal:</td>
-                    <td style="border:none; padding:4px 6px; text-align:right;"><strong>{{ number_format($invoice->subtotal,2) }}</strong></td>
-                </tr>
-                <tr>
-                    <td style="border:none; padding:4px 6px;" class="small">Impuesto:</td>
-                    <td style="border:none; padding:4px 6px; text-align:right;"><strong>{{ number_format($invoice->tax_total,2) }}</strong></td>
-                </tr>
-                <tr>
-                    <td style="border:none; padding:4px 6px;" class="small">Total:</td>
-                    <td style="border:none; padding:4px 6px; text-align:right;"><strong>{{ number_format($invoice->total,2) }}</strong></td>
-                </tr>
-                @if($invoice->payment)
-                <tr style="border-top: 1px solid #ddd; padding-top:4px; margin-top:4px;">
-                    <td style="border:none; padding:4px 6px;" class="small">Efectivo:</td>
-                    <td style="border:none; padding:4px 6px; text-align:right;"><strong>{{ number_format($invoice->payment->cash_amount,2) }}</strong></td>
-                </tr>
-                <tr>
-                    <td style="border:none; padding:4px 6px;" class="small">Transferencia:</td>
-                    <td style="border:none; padding:4px 6px; text-align:right;"><strong>{{ number_format($invoice->payment->transfer_amount,2) }}</strong></td>
-                </tr>
+    <!-- HEADER: Company Info + Invoice Number -->
+    <table class="header-table">
+        <tr>
+            <td style="width: 50%; vertical-align: top;">
+                @php $logoPath = public_path('images/ecolindus-logo.png'); @endphp
+                @if(file_exists($logoPath))
+                    <img src="file://{{ $logoPath }}" alt="Logo" style="max-width: 100px; height: auto; margin-bottom: 4px;">
+                @else
+                    <div style="font-size: 13px; font-weight: bold; margin-bottom: 4px;">{{ config('company.name', 'ECOLINDUS') }}</div>
                 @endif
-            </table>
-            </div>
-        </div>
+                <div style="font-size: 10px;">
+                    <strong>RUC:</strong> {{ config('company.ruc') }}
+                </div>
+            </td>
+            <td style="width: 50%; vertical-align: top; text-align: right;">
+                @php
+                    $est = config('company.establishment_number') ?? '';
+                    $emi = config('company.emission_number') ?? '';
+                    $seq = null;
+                    if (preg_match('/(\d+)$/', $invoice->invoice_number ?? '', $m)) {
+                        $seq = $m[1];
+                    }
+                    if (empty($seq)) {
+                        $seq = $invoice->id ?? '0';
+                    }
+                    $seqPadded = str_pad($seq, 10, '0', STR_PAD_LEFT);
+                    $displayNumber = trim("{$est}-{$emi}-{$seqPadded}", '-');
+                @endphp
+                <div class="invoice-box">
+                    <div style="font-size: 11px; font-weight: bold;">FACTURA</div>
+                    <div class="invoice-number">{{ $displayNumber }}</div>
+                    <div style="font-size: 9px; color: #666; margin-top: 4px;">{{ optional($invoice->date)->format('Y-m-d') ?? optional($invoice->created_at)->format('Y-m-d') ?? '' }}</div>
+                </div>
+            </td>
+        </tr>
+    </table>
 
-        <div style="clear:both"></div>
-    </div>
+    <hr>
 
-    {{-- DomPDF page script for page numbers (works when rendering through Barryvdh/DomPDF) --}}
-    @if (isset($pdf))
-        <script type="text/php">
-            if (isset($pdf)) {
-                $font = $fontMetrics->get_font("DejaVu Sans", "normal");
-                $size = 9;
-                $text = "Página {PAGE_NUM} / {PAGE_COUNT}";
-                $width = $fontMetrics->get_text_width($text, $font, $size);
-                $x = $pdf->get_width() - $width - 24;
-                $y = $pdf->get_height() - 18;
-                $pdf->page_text($x, $y, $text, $font, $size, array(0,0,0));
-            }
-        </script>
+    <!-- CLIENT INFO -->
+    <div class="section-title">CLIENTE</div>
+    <table class="header-table">
+        <tr>
+            <td style="width: 70%;">
+                <div style="font-size: 11px;">
+                    <strong>{{ optional($invoice->customer)->first_name }} {{ optional($invoice->customer)->last_name }}</strong>
+                </div>
+                @if(optional($invoice->customer)->identification)
+                    <div style="font-size: 10px; color: #666;">Cédula/RUC: {{ optional($invoice->customer)->identification }}</div>
+                @endif
+                @if(optional($invoice->customer)->address)
+                    <div style="font-size: 10px; color: #666;">Dirección: {{ optional($invoice->customer)->address }}</div>
+                @endif
+            </td>
+            <td style="width: 30%; vertical-align: top;">
+                @if($invoice->payment_method)
+                    <div style="font-size: 10px; font-weight: bold; color: #333;">FORMA DE PAGO</div>
+                    <div style="font-size: 11px;">{{ $invoice->payment_method }}</div>
+                @endif
+            </td>
+        </tr>
+    </table>
+
+    <hr>
+
+    <!-- ITEMS TABLE -->
+    <div class="section-title">DETALLE DE ARTÍCULOS</div>
+    <table class="items-table">
+        <tr>
+            <th style="width: 45%;">Producto</th>
+            <th style="width: 12%;" class="right">Cantidad</th>
+            <th style="width: 15%;" class="right">Precio</th>
+            <th style="width: 12%;" class="right">Impuesto</th>
+            <th style="width: 16%;" class="right">Total</th>
+        </tr>
+        @foreach($invoice->items as $item)
+        <tr>
+            <td class="border-cell">{{ optional($item->product)->name }}</td>
+            <td class="border-cell right">{{ $item->quantity }}</td>
+            @php
+                $taxRate = $item->tax_rate ?? 0;
+                $displayUnit = ($taxRate > 0) ? ($item->unit_price * (1 + ($taxRate/100))) : $item->unit_price;
+                $lineTax = ($taxRate/100) * $item->line_total;
+            @endphp
+            <td class="border-cell right">${{ number_format($displayUnit, 2) }}</td>
+            <td class="border-cell right">{{ $item->tax_rate }}%</td>
+            <td class="border-cell right"><strong>${{ number_format($item->line_total + $lineTax, 2) }}</strong></td>
+        </tr>
+        @endforeach
+    </table>
+
+    <!-- TOTALS TABLE -->
+    <table class="totals-table">
+        <tr>
+            <td class="totals-label">Subtotal:</td>
+            <td class="totals-value">${{ number_format($invoice->subtotal, 2) }}</td>
+        </tr>
+        <tr>
+            <td class="totals-label">IVA:</td>
+            <td class="totals-value">${{ number_format($invoice->tax_total, 2) }}</td>
+        </tr>
+        <tr class="total-row">
+            <td class="totals-label">TOTAL A PAGAR:</td>
+            <td class="totals-value">${{ number_format($invoice->total, 2) }}</td>
+        </tr>
+    </table>
+
+    @if($invoice->payment)
+    <table class="totals-table" style="margin-top: 8px;">
+        <tr>
+            <td class="payment-detail">Efectivo:</td>
+            <td class="payment-detail right">${{ number_format($invoice->payment->cash_amount, 2) }}</td>
+        </tr>
+        <tr>
+            <td class="payment-detail">Transferencia:</td>
+            <td class="payment-detail right">${{ number_format($invoice->payment->transfer_amount, 2) }}</td>
+        </tr>
+    </table>
     @endif
 
     <div class="footer">
-        <div style="text-align:center;">Generado por ECOLINDUS</div>
+        <div>Documento generado por ECOLINDUS {{ now()->format('Y-m-d H:i') }}</div>
     </div>
-
 </body>
 </html>

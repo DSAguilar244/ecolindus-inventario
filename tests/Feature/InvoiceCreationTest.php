@@ -13,8 +13,11 @@ class InvoiceCreationTest extends TestCase
 
     public function test_creates_an_invoice_when_there_is_sufficient_stock()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['id' => 1]);
         $product = Product::factory()->create(['stock' => 10, 'price' => 5]);
+
+        // Ensure there is an open cash session in the testing environment
+        $this->seed(\Database\Seeders\CashSessionTestSeeder::class);
 
         $payload = [
             'emit' => '1',
@@ -74,5 +77,35 @@ class InvoiceCreationTest extends TestCase
             ->assertSessionHas('error');
 
         $this->assertDatabaseMissing('invoices', ['user_id' => $user->id]);
+    }
+
+    public function test_rejects_invoice_creation_without_open_cash_session()
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['stock' => 10, 'price' => 5]);
+
+        $payload = [
+            'emit' => '1',
+            'customer' => [
+                'id_type' => '04',
+                'identification' => '1234567890',
+                'first_name' => 'NoCaja',
+                'last_name' => 'Test',
+                'address' => 'Sin Caja',
+            ],
+            'items' => [
+                [
+                    'product_id' => $product->id,
+                    'quantity' => 1,
+                    'unit_price' => 5,
+                    'tax_rate' => 0,
+                ],
+            ],
+        ];
+
+        // Ask for JSON to get the 403 response we return for API consumers
+        $this->actingAs($user)
+            ->postJson(route('invoices.store'), $payload)
+            ->assertStatus(403);
     }
 }

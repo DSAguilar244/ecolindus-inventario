@@ -42,13 +42,13 @@ class DropSlugFromBrandsCategories extends Migration
     {
         Schema::table('brands', function (Blueprint $table) {
             if (! Schema::hasColumn('brands', 'slug')) {
-                $table->string('slug')->unique()->after('name');
+                $table->string('slug')->nullable()->unique()->after('name');
             }
         });
 
         Schema::table('categories', function (Blueprint $table) {
             if (! Schema::hasColumn('categories', 'slug')) {
-                $table->string('slug')->unique()->after('name');
+                $table->string('slug')->nullable()->unique()->after('name');
             }
         });
     }

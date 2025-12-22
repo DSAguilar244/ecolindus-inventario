@@ -15,6 +15,12 @@ class CashSession extends Model
         'closed_at',
         'opening_amount',
         'closing_amount',
+        'total_invoiced',
+        'total_cash',
+        'total_transfer',
+        'expected_closing',
+        'reported_closing_amount',
+        'difference',
         'status',
         'notes',
     ];
@@ -24,6 +30,12 @@ class CashSession extends Model
         'closed_at' => 'datetime',
         'opening_amount' => 'decimal:2',
         'closing_amount' => 'decimal:2',
+        'total_invoiced' => 'decimal:2',
+        'total_cash' => 'decimal:2',
+        'total_transfer' => 'decimal:2',
+        'expected_closing' => 'decimal:2',
+        'reported_closing_amount' => 'decimal:2',
+        'difference' => 'decimal:2',
     ];
 
     public function user()

@@ -15,7 +15,7 @@
         </div>
 
         <div class="d-flex gap-2">
-            <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline-dark">
+            <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline-dark" target="_blank" rel="noopener">
                 <i class="bi bi-file-earmark-pdf me-2"></i>Imprimir / PDF
             </a>
             <a href="{{ route('invoices.index') }}" class="btn btn-link">Volver a facturas</a>
@@ -186,9 +186,9 @@
                                 showGlobalToast('Factura anulada', { classname: 'bg-success text-white', delay: 1500 });
                                 setTimeout(function(){ window.location.href = "{{ route('invoices.index') }}"; }, 1500);
                             }else{
-                                resp.json().then(data => { alert(data?.message || 'Error al anular factura'); if(btn) btn.disabled = false; });
+                                resp.json().then(data => { showGlobalToast(data?.message || 'Error al anular factura', { classname: 'bg-danger text-white', delay: 3000 }); if(btn) btn.disabled = false; });
                             }
-                        }).catch(()=>{ alert('Error de red.'); if(btn) btn.disabled = false; });
+                        }).catch(()=>{ showGlobalToast('Error de red.', { classname: 'bg-danger text-white', delay: 3000 }); if(btn) btn.disabled = false; });
                     });
                 }
             }
@@ -218,9 +218,9 @@
                                 showGlobalToast('Factura eliminada correctamente', { classname: 'bg-success text-white', delay: 1500 });
                                 setTimeout(function(){ window.location.href = "{{ route('invoices.index') }}"; }, 1500);
                             }else{
-                                resp.json().then(data => { alert(data?.message || 'Error al eliminar factura'); if(btn) btn.disabled = false; });
+                                resp.json().then(data => { showGlobalToast(data?.message || 'Error al eliminar factura', { classname: 'bg-danger text-white', delay: 3000 }); if(btn) btn.disabled = false; });
                             }
-                        }).catch(()=>{ alert('Error de red.'); if(btn) btn.disabled = false; });
+                        }).catch(()=>{ showGlobalToast('Error de red.', { classname: 'bg-danger text-white', delay: 3000 }); if(btn) btn.disabled = false; });
                     });
                 }
             }

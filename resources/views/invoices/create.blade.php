@@ -25,6 +25,13 @@
         </div>
     @endif
 
+    @if(!($hasOpenCashSession ?? false))
+        <div class="alert alert-warning d-flex align-items-center border-0 shadow-sm">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <div>Debe abrir la caja para poder crear facturas. <a href="{{ route('dashboard') }}">Abrir/Ver caja</a></div>
+        </div>
+    @endif
+
     <div class="card shadow-sm">
         <div class="card-body">
             <form id="invoiceForm" action="{{ route('invoices.store') }}" method="POST">
@@ -102,15 +109,15 @@
                         <label class="form-label">Forma de pago</label>
                         <select name="payment_method" class="form-select">
                             <option value="">-- Seleccione --</option>
-                            <option value="Pago físico">Pago físico</option>
+                            <option value="Efectivo">Efectivo</option>
                             <option value="Transferencia">Transferencia</option>
                         </select>
                     </div>
                 </div>
 
                 <div class="mt-4 text-end">
-                    <button class="btn btn-outline-secondary me-2" name="emit" value="0">Guardar como pendiente</button>
-                    <button type="button" id="emitBtn" class="btn btn-dark" disabled>Guardar y Emitir</button>
+                        <button class="btn btn-outline-secondary me-2" name="emit" value="0" id="savePendingBtn">Guardar como pendiente</button>
+                        <button type="button" id="emitBtn" class="btn btn-dark" disabled>Guardar y Emitir</button>
                     <a href="{{ route('invoices.index') }}" class="btn btn-link">Cancelar</a>
                 </div>
             </form>
@@ -144,6 +151,27 @@
 
     @push('scripts')
     <script>
+    document.addEventListener('DOMContentLoaded', function(){
+        // If there is no open cash session, prevent creating invoices client-side as well
+        var hasOpenCash = {{ ($hasOpenCashSession ?? false) ? 'true' : 'false' }};
+        if(!hasOpenCash){
+            try{ showGlobalToast('Debe abrir la caja para poder crear facturas.', {type: 'error'}); }catch(e){}
+            // Disable form submission buttons
+            var savePending = document.getElementById('savePendingBtn');
+            if(savePending) savePending.disabled = true;
+            var emitBtn = document.getElementById('emitBtn');
+            if(emitBtn) emitBtn.disabled = true;
+            // Prevent form submit
+            var invoiceForm = document.getElementById('invoiceForm');
+            if(invoiceForm){
+                invoiceForm.addEventListener('submit', function(e){
+                    e.preventDefault();
+                    try{ showGlobalToast('Debe abrir la caja para poder crear facturas.', {type: 'error'}); }catch(err){}
+                    return false;
+                });
+            }
+        }
+    });
     // Initialize Select2 for customer search
     $(document).ready(function(){
         $('#customer-select').select2({
@@ -170,9 +198,12 @@
             if(!$('#selected_customer_id').length){
                 $('<input>').attr({type:'hidden', id:'selected_customer_id', name:'customer_id', value: data.id}).appendTo('#invoiceForm');
             } else { $('#selected_customer_id').val(data.id); }
+            // Re-run validations / enable emit button in case form was blocked earlier
+            try{ validateEmitButton(); }catch(e){}
         }).on('select2:clear', function(){
             $('#customer-details').addClass('d-none');
             $('#invoiceForm #selected_customer_id').remove();
+            try{ validateEmitButton(); }catch(e){}
         });
 
         // Add new customer button opens create modal
@@ -204,6 +235,8 @@
                 $('#c_last_name').val(resp.customer.last_name);
                     $('#c_phone').val(resp.customer.phone);
                     $('#c_address').val(resp.customer.address ?? '');
+                // ensure form validations / buttons reflect new customer
+                try{ validateEmitButton(); }catch(e){}
             },
             error: function(xhr){
                 // Clear previous errors
@@ -237,7 +270,7 @@
                         }
                     });
                 } else {
-                    alert('Error al crear cliente: ' + (xhr.responseJSON?.message || xhr.statusText));
+                    showGlobalToast('Error al crear cliente: ' + (xhr.responseJSON?.message || xhr.statusText), { classname: 'bg-danger text-white', delay: 3000 });
                 }
             }
         });
@@ -386,9 +419,9 @@
                     $(sel).val(pid).trigger('change');
                         invalidatePaymentIfNeeded();
                 } else {
-                    alert('Producto no encontrado con ese código');
+                    showGlobalToast('Producto no encontrado con ese código', {type: 'error'});
                 }
-            }).fail(function(){ alert('Error al buscar producto'); });
+            }).fail(function(){ showGlobalToast('Error al buscar producto', {type: 'error'}); });
         });
 
         tbody.addEventListener('click', function(e){
@@ -527,7 +560,7 @@
                 if(isNaN(qty) || qty <= 0){ invalid = true; }
             });
             if(invalid){
-                alert('Revise las cantidades: todos los artículos deben tener una cantidad mayor a 0');
+                showGlobalToast('Revise las cantidades: todos los artículos deben tener una cantidad mayor a 0', {type: 'warning'});
                 return false;
             }
         });
@@ -549,7 +582,7 @@
             const totalFixed = parseFloat(total).toFixed(2);
             $('#payment_total_display').val(totalFixed);
             const pm = $('select[name="payment_method"]').val();
-            if(pm === 'Pago físico'){
+            if(pm === 'Efectivo'){
                 $('#payment_cash').val(totalFixed);
                 $('#payment_transfer').val((0).toFixed(2));
             } else if(pm === 'Transferencia'){
@@ -567,7 +600,7 @@
         function showConfirmEmitModal(){
             const total = computeGlobalTotals();
             const totalFixed = parseFloat(total).toFixed(2);
-            const pm = $('select[name="payment_method"]').val();
+                const pm = $('select[name="payment_method"]').val();
             const custName = ($('#c_first_name').val() || '') + ' ' + ($('#c_last_name').val() || '');
             
             let details = `
@@ -575,6 +608,12 @@
                 <strong>Total:</strong> $${totalFixed}<br/>
             `;
             
+            if(!pm || pm === ''){
+                // require a payment method before showing confirm
+                showGlobalToast('Debe seleccionar una forma de pago antes de emitir', {classname: 'bg-danger text-white', delay: 3000});
+                return;
+            }
+
             if(pm){
                 details += `<strong>Método de Pago:</strong> ${pm}<br/>`;
             }
@@ -611,6 +650,7 @@
                 $('#payment_error').removeClass('d-none');
                 return;
             }
+
             // create or set hidden inputs
             if(!$('#invoiceForm input[name="cash_amount"]').length){
                 $('<input>').attr({type:'hidden', name:'cash_amount', value: cash}).appendTo('#invoiceForm');
@@ -662,6 +702,26 @@
             }
             $('#invoiceForm').submit();
         });
+
+            // Real-time payment validation: show sum while user types
+            $(document).on('input', '#payment_cash, #payment_transfer', function(){
+                const total = parseFloat($('#payment_total_display').val() || 0);
+                const cash = parseFloat($('#payment_cash').val() || 0);
+                const transfer = parseFloat($('#payment_transfer').val() || 0);
+                const sum = cash + transfer;
+            
+                // Create display element if not exists
+                let displayEl = $('#payment_sum_display');
+                if(displayEl.length === 0){
+                    displayEl = $('<div>').attr('id', 'payment_sum_display').addClass('alert alert-info small mb-2');
+                    $('#payment_error').before(displayEl);
+                }
+            
+                const match = Math.abs(sum - total) < 0.01;
+                displayEl.html(`Suma ingresada: <strong>$${sum.toFixed(2)}</strong> ${match ? '✓' : '(Total: $' + total.toFixed(2) + ')'}`);
+                displayEl.removeClass('alert-info alert-warning alert-success');
+                displayEl.addClass(match ? 'alert-success' : 'alert-warning');
+            });
     });
     </script>
     @endpush
@@ -731,14 +791,18 @@
                         <input id="payment_total_display" class="form-control" readonly />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Efectivo (cash_amount)</label>
+                        <label class="form-label">Efectivo</label>
                         <input id="payment_cash" name="payment_cash_ui" type="number" class="form-control" step="0.01" min="0" />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Transferencia (transfer_amount)</label>
+                        <label class="form-label">Transferencia</label>
                         <input id="payment_transfer" name="payment_transfer_ui" type="number" class="form-control" step="0.01" min="0" />
                     </div>
                     <div id="payment_error" class="text-danger small d-none">La suma de efectivo y transferencia debe ser igual al total de la factura.</div>
+                    <div id="payment_error" class="alert alert-danger small d-none mb-0">
+                                        <strong>Error:</strong> La suma de Efectivo + Transferencia debe ser igual al total de la factura.
+                                        <br><small>Ejemplo: Si paga solo con efectivo, ingresa el total en "Efectivo" y 0 en "Transferencia"</small>
+                                    </div>
                 </div>
                 <div class="modal-footer border-0">
                     <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>

@@ -13,7 +13,8 @@ class InvoiceMergeDuplicateItemsTest extends TestCase
 
     public function test_it_merges_duplicate_items_for_same_product()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['id' => 1]);
+        $this->seed(\Database\Seeders\CashSessionTestSeeder::class);
         $product = Product::factory()->create(['price' => 15, 'tax_rate' => 0, 'stock' => 50]);
 
         $payload = [
@@ -53,7 +54,8 @@ class InvoiceMergeDuplicateItemsTest extends TestCase
 
     public function test_update_merges_duplicate_items_for_same_product()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['id' => 1]);
+        $this->seed(\Database\Seeders\CashSessionTestSeeder::class);
         $product = Product::factory()->create(['price' => 15, 'tax_rate' => 0, 'stock' => 50]);
 
         // Create a pending invoice we can update

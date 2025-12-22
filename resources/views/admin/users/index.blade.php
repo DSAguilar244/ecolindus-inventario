@@ -3,39 +3,99 @@
 @section('content')
 <div class="container-fluid py-4">
     <h2>Administración de usuarios</h2>
-    <div class="card mt-3">
+    
+    <!-- VISTA DESKTOP: Tabla -->
+    <div class="card mt-3 d-none d-lg-block">
         <div class="card-body">
-            <table class="table">
-                <thead>
-                    <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Acciones</th></tr>
-                </thead>
-                <tbody>
-                @foreach($users as $u)
-                    <tr data-user-id="{{ $u->id }}">
-                        <td>{{ $u->name }}</td>
-                        <td>{{ $u->email }}</td>
-                        <td>{{ $u->role ?? 'viewer' }}</td>
-                        <td>
-                            <form action="{{ route('admin.users.update', $u) }}" method="POST" class="d-inline">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Email</th>
+                            <th>Rol</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($users as $u)
+                        <tr data-user-id="{{ $u->id }}">
+                            <td>{{ $u->name }}</td>
+                            <td>{{ $u->email }}</td>
+                            <td>
+                                <span class="badge" :class="'{{ $u->role ?? 'viewer' }}' === 'admin' ? 'bg-danger' : ('{{ $u->role ?? 'viewer' }}' === 'editor' ? 'bg-warning' : 'bg-secondary')">
+                                    {{ $u->role ?? 'viewer' }}
+                                </span>
+                            </td>
+                            <td class="text-center text-nowrap">
+                                <form action="{{ route('admin.users.update', $u) }}" method="POST" class="d-inline">
+                                    @csrf @method('PATCH')
+                                    <select name="role" class="form-select form-select-sm d-inline-block w-auto"> 
+                                        <option value="viewer" {{ $u->role === 'viewer' ? 'selected' : '' }}>Viewer</option>
+                                        <option value="editor" {{ $u->role === 'editor' ? 'selected' : '' }}>Editor</option>
+                                        <option value="admin" {{ $u->role === 'admin' ? 'selected' : '' }}>Admin</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-primary" style="height: 34px; min-width: 44px;">Guardar</button>
+                                </form>
+                                @can('manage-users')
+                                @if(Auth::id() !== $u->id)
+                                    <button type="button" class="btn btn-sm btn-danger user-delete-btn" data-user-id="{{ $u->id }}" data-user-name="{{ $u->name }}" data-bs-toggle="modal" data-bs-target="#userDeleteModal" style="height: 34px; min-width: 44px;" title="Eliminar usuario">🗑️</button>
+                                @endif
+                                @endcan
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- VISTA MOBILE: Cards -->
+    <div class="row g-3 d-lg-none">
+    @forelse($users as $u)
+        <div class="col-12">
+            <div class="card border-light shadow-sm">
+                <div class="card-body p-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-12">
+                            <h6 class="mb-1 fw-bold">{{ $u->name }}</h6>
+                            <p class="text-muted small mb-2">{{ $u->email }}</p>
+                            <div class="mb-3">
+                                <span class="badge" :class="'{{ $u->role ?? 'viewer' }}' === 'admin' ? 'bg-danger' : ('{{ $u->role ?? 'viewer' }}' === 'editor' ? 'bg-warning' : 'bg-secondary')">
+                                    {{ $u->role ?? 'viewer' }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <form action="{{ route('admin.users.update', $u) }}" method="POST" class="d-flex gap-2 flex-wrap">
                                 @csrf @method('PATCH')
-                                <select name="role" class="form-select d-inline-block w-auto"> 
+                                <select name="role" class="form-select form-select-sm flex-grow-1" style="min-height: 44px;"> 
                                     <option value="viewer" {{ $u->role === 'viewer' ? 'selected' : '' }}>Viewer</option>
                                     <option value="editor" {{ $u->role === 'editor' ? 'selected' : '' }}>Editor</option>
                                     <option value="admin" {{ $u->role === 'admin' ? 'selected' : '' }}>Admin</option>
                                 </select>
-                                <button class="btn btn-sm btn-primary">Guardar</button>
+                                <button class="btn btn-sm btn-primary" style="height: 44px; min-width: 44px;">Guardar</button>
                             </form>
-                            @can('manage-users')
-                            @if(Auth::id() !== $u->id)
-                                <button type="button" class="btn btn-sm btn-danger user-delete-btn ms-2" data-user-id="{{ $u->id }}" data-user-name="{{ $u->name }}" data-bs-toggle="modal" data-bs-target="#userDeleteModal"><i class="bi bi-trash"></i> Eliminar</button>
-                            @endif
-                            @endcan
-                        </td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
+                        </div>
+                        @can('manage-users')
+                        @if(Auth::id() !== $u->id)
+                        <div class="col-12">
+                            <button type="button" class="btn btn-sm btn-danger w-100 user-delete-btn" style="height: 44px;" data-user-id="{{ $u->id }}" data-user-name="{{ $u->name }}" data-bs-toggle="modal" data-bs-target="#userDeleteModal">
+                                🗑️ Eliminar usuario
+                            </button>
+                        </div>
+                        @endif
+                        @endcan
+                    </div>
+                </div>
+            </div>
         </div>
+    @empty
+        <div class="col-12">
+            <div class="alert alert-info">No hay usuarios registrados.</div>
+        </div>
+    @endforelse
     </div>
             <!-- Modal eliminar usuario -->
             <div class="modal fade" id="userDeleteModal" tabindex="-1">
@@ -68,53 +128,62 @@
 <script>
     document.addEventListener('DOMContentLoaded', function(){
         const modal = document.getElementById('userDeleteModal');
-        if(modal){
-            modal.addEventListener('show.bs.modal', function(e){
-                // handled by button click below
-            });
-        }
-
-        document.querySelectorAll('.user-delete-btn').forEach(function(btn){
-            btn.addEventListener('click', function(){
-                const userId = btn.getAttribute('data-user-id');
-                const userName = btn.getAttribute('data-user-name');
-                const modalEl = document.getElementById('userDeleteModal');
-                const nameEl = modalEl.querySelector('#userToDeleteName');
-                const form = document.getElementById('userDeleteForm');
-                if(nameEl) nameEl.textContent = userName;
-                if(form) form.action = `/admin/users/${userId}`;
-            });
-        });
-
         const userDeleteForm = document.getElementById('userDeleteForm');
-        if (userDeleteForm) {
-            userDeleteForm.addEventListener('submit', function(e){
+
+        if(modal && userDeleteForm){
+            document.querySelectorAll('.user-delete-btn').forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    const userId = btn.getAttribute('data-user-id');
+                    const userName = btn.getAttribute('data-user-name');
+                    const nameEl = modal.querySelector('#userToDeleteName');
+                    if(nameEl) nameEl.textContent = userName;
+                    userDeleteForm.action = `/admin/users/${userId}`;
+                });
+            });
+
+            userDeleteForm.addEventListener('submit', async function(e){
                 e.preventDefault();
                 const btn = userDeleteForm.querySelector('button[type="submit"]');
                 if(btn) btn.disabled = true;
-                fetch(userDeleteForm.action, {
-                    credentials: 'same-origin',
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': userDeleteForm.querySelector('input[name="_token"]').value,
-                        'Accept': 'application/json'
-                    },
-                    body: new FormData(userDeleteForm)
-                }).then(resp => {
-                    if(resp.ok){
+                
+                try {
+                    const response = await fetch(userDeleteForm.action, {
+                        credentials: 'same-origin',
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': userDeleteForm.querySelector('input[name="_token"]').value,
+                            'Accept': 'application/json'
+                        },
+                        body: new FormData(userDeleteForm)
+                    });
+
+                    if(response.ok){
                         const bsModal = bootstrap.Modal.getInstance(modal);
                         if(bsModal) bsModal.hide();
-                        showGlobalToast('Usuario eliminado correctamente', { classname: 'bg-success text-white', delay: 1200 });
-                        // remove user row from DOM and reload if no rows left to keep pagination consistent
-                        const uid = userDeleteForm.action.split('/').pop();
-                        const row = document.querySelector(`tr[data-user-id="${uid}"]`);
+                        
+                        const userId = userDeleteForm.action.split('/').pop();
+                        const row = document.querySelector(`tr[data-user-id="${userId}"]`);
+                        const card = document.querySelector(`.card-body [data-user-id="${userId}"]`).closest('.col-12');
+                        
                         if (row) { row.remove(); }
-                        setTimeout(function() { if (document.querySelectorAll('table tbody tr[data-user-id]').length === 0) { window.location.reload(); } }, 600);
-                    }else{
-                        resp.json().then(data => alert(data?.message || 'Error al eliminar usuario'));
+                        if (card) { card.remove(); }
+                        
+                        showGlobalToast('Usuario eliminado correctamente', { classname: 'bg-success text-white', delay: 1200 });
+                        
+                        setTimeout(function() {
+                            if (document.querySelectorAll('table tbody tr[data-user-id]').length === 0) {
+                                window.location.reload();
+                            }
+                        }, 600);
+                    } else {
+                        const data = await response.json();
+                        showGlobalToast(data?.message || 'Error al eliminar usuario', { classname: 'bg-danger text-white', delay: 3000 });
                         if(btn) btn.disabled = false;
                     }
-                }).catch(()=>{ alert('Error de red.'); if(btn) btn.disabled = false; });
+                } catch(error) {
+                    showGlobalToast('Error de red.', { classname: 'bg-danger text-white', delay: 3000 });
+                    if(btn) btn.disabled = false;
+                }
             });
         }
     });

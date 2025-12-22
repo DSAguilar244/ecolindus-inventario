@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use App\Models\AuditLog;
 use App\Models\InvoicePayment;
+use App\Models\CashSession;
 
 class InvoiceController extends Controller
 {
@@ -52,13 +53,33 @@ class InvoiceController extends Controller
     public function create()
     {
         $products = Product::orderBy('name')->get();
+        $user = Auth::user();
+        $hasOpenCashSession = false;
+        if ($user) {
+            $hasOpenCashSession = CashSession::where('user_id', $user->id)->where('status', 'open')->exists();
+        }
+        // Always enforce cash session requirement; view will receive the real state
 
-        return view('invoices.create', compact('products'));
+        return view('invoices.create', compact('products', 'hasOpenCashSession'));
     }
 
     public function store(StoreInvoiceRequest $request)
     {
         $data = $request->validated();
+
+        // Ensure a cash session is open for the current user before allowing invoice creation
+        $user = $request->user();
+        $hasOpenCashSession = false;
+        if ($user) {
+            $hasOpenCashSession = CashSession::where('user_id', $user->id)->where('status', 'open')->exists();
+        }
+        if (! $hasOpenCashSession) {
+            $msg = 'Debe abrir caja para poder crear facturas.';
+            if ($request->expectsJson() || $request->isJson() || $request->wantsJson()) {
+                return response()->json(['message' => $msg], 403);
+            }
+            return redirect()->route('dashboard')->with('error', $msg);
+        }
 
         // Determine if we should emit now or save as pending
         $willEmit = ($request->input('emit') === '1' || $request->input('status') === Invoice::STATUS_EMITIDA || ! is_null($request->input('emit')) && $request->input('emit') == 1);
@@ -142,6 +163,12 @@ class InvoiceController extends Controller
                 'payment_method' => $data['payment_method'] ?? null,
             ]);
 
+            // Normalize legacy 'Pago físico' label to canonical 'Efectivo'
+            if ($invoice->payment_method === 'Pago físico') {
+                $invoice->payment_method = 'Efectivo';
+                $invoice->save();
+            }
+
             $calculator = new InvoiceTotalsCalculator();
             $totals = $calculator->calculate($data['items']);
 
@@ -181,9 +208,25 @@ class InvoiceController extends Controller
                 $cash = (float) ($cashInput ?? 0);
                 $transfer = (float) ($transferInput ?? 0);
                 // Validate that cash + transfer equals invoice total (2 decimal tolerance)
-                if (round($cash + $transfer, 2) !== round($invoice->total, 2)) {
+                $sumRounded = round($cash + $transfer, 2);
+                $invoiceTotalRounded = round($invoice->total, 2);
+                // Allow small rounding tolerance and accept overpayment (change)
+                $tolerance = 0.01; // 1 cent
+                if (($sumRounded + $tolerance) < $invoiceTotalRounded) {
                     DB::rollBack();
-                    return redirect()->back()->withInput()->with('error', 'La suma de efectivo y transferencia no coincide con el total de la factura.');
+                    return redirect()->back()->withInput()->with('error', "La suma de efectivo (".number_format($cash,2).") y transferencia (".number_format($transfer,2).") es menor que el total de la factura (".number_format($invoiceTotalRounded,2)."). Por favor, verifique los montos y reintente.");
+                }
+
+                // If no explicit payment_method provided but we are emitting, derive a sensible default
+                if ($willEmit && empty($invoice->payment_method)) {
+                    if ($cash > 0 && $transfer > 0) {
+                        $invoice->payment_method = 'Efectivo';
+                    } elseif ($cash > 0) {
+                        $invoice->payment_method = 'Efectivo';
+                    } elseif ($transfer > 0) {
+                        $invoice->payment_method = 'Transferencia';
+                    }
+                    $invoice->save();
                 }
 
                 InvoicePayment::create([

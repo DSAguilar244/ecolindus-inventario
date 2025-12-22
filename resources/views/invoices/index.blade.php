@@ -254,6 +254,9 @@
                     form.action = `/invoices/${invoiceId}`;
                     form.dataset.invoiceId = invoiceId;
                     invoiceNumberElement.textContent = invoiceNumber;
+                    // Ensure submit button is enabled when modal opens (in case it was disabled previously)
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Anular Factura'; }
                 });
                 deleteModal.addEventListener('shown.bs.modal', function(){ deleteModalScrollTop = window.scrollY; });
                 deleteModal.addEventListener('hidden.bs.modal', function(){ window.scrollTo(0, deleteModalScrollTop); });
@@ -289,10 +292,10 @@
                                     if(document.querySelectorAll('#invoices-table tbody tr').length === 0){ window.location.reload(); }
                                 }, 600);
                             } else {
-                                resp.json().then(data => { alert(data?.message || 'Error al anular factura'); });
+                                resp.json().then(data => { showGlobalToast(data?.message || 'Error al anular factura', { classname: 'bg-danger text-white', delay: 3000 }); });
                                 if(btn) btn.disabled = false;
                             }
-                        }).catch(()=>{ alert('Error de red.'); if(btn) btn.disabled = false; });
+                        }).catch(()=>{ showGlobalToast('Error de red.', { classname: 'bg-danger text-white', delay: 3000 }); if(btn) btn.disabled = false; });
                     });
                 }
             }
@@ -341,13 +344,11 @@
                                 if(row){ row.remove(); }
                                 setTimeout(function(){ if(document.querySelectorAll('#invoices-table tbody tr').length === 0){ window.location.reload(); } }, 600);
                             }else{
-                                resp.json().then(data => {
-                                    alert(data?.error || 'Error al eliminar la factura');
-                                });
+                                resp.json().then(data => { showGlobalToast(data?.error || 'Error al eliminar la factura', { classname: 'bg-danger text-white', delay: 3000 }); });
                                 if(btn) btn.disabled = false;
                             }
                         }).catch(()=>{
-                            alert('Error de red.');
+                            showGlobalToast('Error de red.', { classname: 'bg-danger text-white', delay: 3000 });
                             if(btn) btn.disabled = false;
                         });
                     });

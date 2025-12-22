@@ -29,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
             // but ensure it's used for testing
         }
 
+        // Secure headers middleware available at app/Http/Middleware/SecureHeaders.php.
+        // Register it in `app/Http/Kernel.php` under the `web` group to enable globally.
+
         // Define simple gates based on the is_admin flag for invoice management
         Gate::define('force-delete-invoice', function (User $user) {
             return (bool) ($user->is_admin ?? false) || ($user->role === 'admin');

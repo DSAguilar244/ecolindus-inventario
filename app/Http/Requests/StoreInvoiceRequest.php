@@ -27,7 +27,8 @@ class StoreInvoiceRequest extends FormRequest
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.tax_rate' => ['nullable', 'in:0,' . config('taxes.iva')],
-            'payment_method' => ['nullable', 'in:Pago físico,Transferencia'],
+            // Payment method should accept legacy label 'Pago físico' as well as 'Efectivo'
+            'payment_method' => ['nullable', 'in:Efectivo,Transferencia,Pago físico'],
             'cash_amount' => ['nullable','numeric','min:0', new PaymentTotalMatchesInvoice($this)],
             'transfer_amount' => 'nullable|numeric|min:0',
         ];

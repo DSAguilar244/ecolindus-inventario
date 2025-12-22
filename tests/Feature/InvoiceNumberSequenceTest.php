@@ -15,7 +15,8 @@ class InvoiceNumberSequenceTest extends TestCase
     public function test_generates_sequential_invoice_numbers()
     {
         $this->withoutExceptionHandling();
-        $user = User::factory()->create();
+        $user = User::factory()->create(['id' => 1]);
+        $this->seed(\Database\Seeders\CashSessionTestSeeder::class);
         $product = Product::factory()->create(['stock' => 100, 'price' => 10]);
 
         // Ensure invoice_numbers row exists

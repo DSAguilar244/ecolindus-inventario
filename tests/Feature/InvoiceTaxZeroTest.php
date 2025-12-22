@@ -15,7 +15,9 @@ class InvoiceTaxZeroTest extends TestCase
 
     public function test_store_preserves_zero_tax()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['id' => 1]);
+        // Ensure open cash session for the test user
+        $this->seed(\Database\Seeders\CashSessionTestSeeder::class);
         $this->actingAs($user);
 
         $product = Product::factory()->create([ 'price' => 10, 'tax_rate' => 15 ]);
@@ -52,7 +54,9 @@ class InvoiceTaxZeroTest extends TestCase
 
     public function test_update_preserves_zero_tax()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['id' => 1]);
+        // Ensure open cash session for the test user
+        $this->seed(\Database\Seeders\CashSessionTestSeeder::class);
         $this->actingAs($user);
 
         $product = Product::factory()->create([ 'price' => 10, 'tax_rate' => 15 ]);

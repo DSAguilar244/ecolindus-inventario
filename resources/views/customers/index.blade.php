@@ -18,15 +18,7 @@
             <a href="{{ route('customers.export.csv', ['q' => request('q')]) }}" class="btn btn-outline-dark" title="Descargar listado de clientes en CSV">CSV</a>
         </div>
     </div>
-    <!-- Toast container -->
-    <div class="position-fixed top-0 end-0 p-3" style="z-index:9999">
-        <div id="customerToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body" id="customerToastMessage">Acción realizada</div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-        </div>
-    </div>
+    <!-- using global toast from layout -->
 
     <div class="card shadow-sm mb-3">
         <div class="card-body">
@@ -174,46 +166,43 @@
             $(document).one('shown.bs.modal', '#customerIndexModal', function(){ $('#customerIndexCreateForm input[name="identification"]').focus(); $('#customerCreateErrors').addClass('d-none').html(''); });
             m.show();
         });
-        $('#customerIndexCreateSubmit').on('click', function(){
-            const form = $('#customerIndexCreateForm');
-            $.post(form.attr('action'), form.serialize())
-                .done(function(res){
-                    $('#customerIndexModal').modal('hide');
-                    // prepend new row to table
-                    const row = `<tr data-customer-id="${res.customer.id}">
-                        <td>${res.customer.identification}</td>
-                        <td>${res.customer.first_name} ${res.customer.last_name}</td>
-                        <td>${res.customer.phone ?? ''}</td>
-                        <td>${res.customer.email ?? ''}</td>
-                        <td>${res.customer.address ?? ''}</td>
+        document.getElementById('customerIndexCreateSubmit').addEventListener('click', async function(){
+            const form = document.getElementById('customerIndexCreateForm');
+            const res = await ajaxPostForm(form);
+            if(res.ok){
+                $('#customerIndexModal').modal('hide');
+                const cust = res.json.customer;
+                const row = `<tr data-customer-id="${cust.id}">
+                        <td>${cust.identification}</td>
+                        <td>${cust.first_name} ${cust.last_name}</td>
+                        <td>${cust.phone ?? ''}</td>
+                        <td>${cust.email ?? ''}</td>
+                        <td>${cust.address ?? ''}</td>
                         <td class="text-end">
-                            <button type="button" class="btn btn-sm btn-outline-dark me-1 customer-edit-btn" data-customer-id="${res.customer.id}" data-identification="${res.customer.identification}" data-first_name="${res.customer.first_name}" data-last_name="${res.customer.last_name}" data-phone="${res.customer.phone}" data-email="${res.customer.email}">Editar</button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#customerDeleteModal" data-customer-id="${res.customer.id}" data-customer-name="${res.customer.first_name} ${res.customer.last_name}">Eliminar</button>
+                            <button type="button" class="btn btn-sm btn-outline-dark me-1 customer-edit-btn" data-customer-id="${cust.id}" data-identification="${cust.identification}" data-first_name="${cust.first_name}" data-last_name="${cust.last_name}" data-phone="${cust.phone}" data-email="${cust.email}" data-address="${cust.address ?? ''}">Editar</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#customerDeleteModal" data-customer-id="${cust.id}" data-customer-name="${cust.first_name} ${cust.last_name}">Eliminar</button>
                         </td>
                     </tr>`;
-                        $('table.table tbody').prepend(row);
-                        $('#customerCreateErrors').addClass('d-none').html('');
-                        showCustomerToast('Cliente creado');
-                })
-                        .fail(function(xhr){
-                                    if(xhr.status === 409 && xhr.responseJSON && xhr.responseJSON.customer){
-                                        const cust = xhr.responseJSON.customer;
-                                        showCustomerToast('Cliente ya existe: ' + cust.first_name + ' ' + cust.last_name + ' - ' + cust.identification);
-                                        // scroll to existing row and highlight
-                                        const row = $(`table.table tbody tr[data-customer-id='${cust.id}']`);
-                                        if(row.length){
-                                            row.addClass('table-warning');
-                                            $('html, body').animate({ scrollTop: row.offset().top - 80 }, 400);
-                                            setTimeout(()=>row.removeClass('table-warning'), 2800);
-                                        }
-                                    } else if(xhr.status === 422){
-                                        let errors = xhr.responseJSON?.errors || {};
-                                        let errMessages = Object.values(errors).flat().join('<br>');
-                                        $('#customerCreateErrors').removeClass('d-none').html(errMessages);
-                                    } else {
-                                        showCustomerToast('Error al crear cliente');
-                                    }
-                                });
+                $('table.table tbody').prepend(row);
+                document.getElementById('customerCreateErrors').classList.add('d-none');
+                showGlobalToast('Cliente creado', { classname: 'bg-success text-white', delay: 1500 });
+            } else {
+                const status = res.resp?.status;
+                const json = res.json || {};
+                if(status === 409 && json.customer){
+                    const cust = json.customer;
+                    showGlobalToast('Cliente ya existe: ' + cust.first_name + ' ' + cust.last_name + ' - ' + cust.identification, { classname: 'bg-warning text-dark', delay: 3000 });
+                    const row = $(`table.table tbody tr[data-customer-id='${cust.id}']`);
+                    if(row.length){ row.addClass('table-warning'); $('html, body').animate({ scrollTop: row.offset().top - 80 }, 400); setTimeout(()=>row.removeClass('table-warning'), 2800); }
+                } else if(status === 422 && json.errors){
+                    const errors = json.errors || {};
+                    const errMessages = Object.values(errors).flat().join('<br>');
+                    const el = document.getElementById('customerCreateErrors'); el.classList.remove('d-none'); el.innerHTML = errMessages;
+                } else {
+                    showGlobalToast('Error al crear cliente', { classname: 'bg-danger text-white', delay: 3000 });
+                }
+            }
+        });
         // delete modal wiring (global)
         document.getElementById('customerDeleteModal')?.addEventListener('show.bs.modal', function(event){
             const button = event.relatedTarget;
@@ -223,7 +212,27 @@
             const form = document.getElementById('customerDeleteForm');
             form.action = `/customers/${id}`;
         });
-        });
+        // intercept delete form to use AJAX
+        const customerDeleteForm = document.getElementById('customerDeleteForm');
+        if(customerDeleteForm){
+            customerDeleteForm.addEventListener('submit', async function(e){
+                e.preventDefault();
+                const btn = this.querySelector('button[type="submit"]');
+                if(btn) btn.disabled = true;
+                const res = await ajaxPostForm(this);
+                if(res.ok){
+                    $('#customerDeleteModal').modal('hide');
+                    const id = this.action.split('/').pop();
+                    const row = document.querySelector(`tr[data-customer-id="${id}"]`);
+                    if(row) row.remove();
+                    showGlobalToast('Cliente eliminado', { classname: 'bg-success text-white', delay: 1200 });
+                    setTimeout(function(){ if(document.querySelectorAll('table tbody tr[data-customer-id]').length === 0){ window.location.reload(); } }, 600);
+                } else {
+                    showGlobalToast(res.json?.message || 'Error al eliminar cliente', { classname: 'bg-danger text-white', delay: 3000 });
+                    if(btn) btn.disabled = false;
+                }
+            });
+        }
         // Edit customer
         $(document).on('click', '.customer-edit-btn', function(){
             const button = $(this);
@@ -239,19 +248,12 @@
             new bootstrap.Modal(document.getElementById('customerEditModal')).show();
         });
 
-        $('#customerEditSubmit').on('click', function(){
-            const form = $('#customerEditForm');
-            const action = form.attr('action');
-            const data = form.serialize();
-            $.ajax({
-                url: action,
-                type: 'POST', // using POST because of method override in form
-                data: data,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            }).done(function(res){
+        document.getElementById('customerEditSubmit').addEventListener('click', async function(){
+            const form = document.getElementById('customerEditForm');
+            const res = await ajaxPostForm(form);
+            if(res.ok){
                 $('#customerEditModal').modal('hide');
-                const cust = res.customer;
-                // find the table row by customer id
+                const cust = res.json.customer;
                 const row = $(`table.table tbody tr[data-customer-id='${cust.id}']`);
                 if(row.length){
                     row.find('td').eq(0).text(cust.identification);
@@ -259,7 +261,6 @@
                     row.find('td').eq(2).text(cust.phone ?? '');
                     row.find('td').eq(3).text(cust.email ?? '');
                     row.find('td').eq(4).text(cust.address ?? '');
-                    // update edit button data attributes
                     const editBtn = row.find('.customer-edit-btn');
                     editBtn.attr('data-identification', cust.identification);
                     editBtn.attr('data-first_name', cust.first_name);
@@ -268,24 +269,21 @@
                     editBtn.attr('data-email', cust.email);
                     editBtn.attr('data-address', cust.address ?? '');
                 }
-                showCustomerToast('Cliente actualizado');
-            }).fail(function(xhr){
-                if(xhr.status === 422){
-                    let errors = xhr.responseJSON?.errors || {};
-                    let errMessages = Object.values(errors).flat().join('<br>');
-                    $('#customerEditErrors').removeClass('d-none').html(errMessages);
+                showGlobalToast('Cliente actualizado', { classname: 'bg-success text-white', delay: 1500 });
+            } else {
+                const status = res.resp?.status;
+                const json = res.json || {};
+                const el = document.getElementById('customerEditErrors');
+                if(status === 422 && json.errors){
+                    const errors = json.errors || {};
+                    const errMessages = Object.values(errors).flat().join('<br>');
+                    el.classList.remove('d-none'); el.innerHTML = errMessages;
                 } else {
-                    $('#customerEditErrors').removeClass('d-none').html('Error al actualizar cliente');
+                    el.classList.remove('d-none'); el.innerHTML = 'Error al actualizar cliente';
                 }
-            });
+            }
         });
-        // helper: toast
-        function showCustomerToast(message){
-            $('#customerToastMessage').text(message);
-            const tEl = document.getElementById('customerToast');
-            const toast = new bootstrap.Toast(tEl);
-            toast.show();
-        }
+        // using global showGlobalToast()
 
         // Search buttons
         $('#customerSearchBtn').on('click', function(){

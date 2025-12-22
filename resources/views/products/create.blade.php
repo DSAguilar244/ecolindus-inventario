@@ -318,7 +318,7 @@
                     if(errors.name){ $('#category_name').addClass('is-invalid'); $('#category_name_error').text(errors.name[0]); }
                     if(errors.description){ $('#category_description').addClass('is-invalid'); $('#category_description_error').text(errors.description[0]); }
                 } else {
-                    alert('Error creando categoría: ' + (xhr.responseJSON?.message || xhr.statusText));
+                    showGlobalToast('Error creando categoría: ' + (xhr.responseJSON?.message || xhr.statusText), {type: 'error'});
                 }
             });
     });
@@ -349,7 +349,7 @@
                     if(errors.name){ $('#brand_name').addClass('is-invalid'); $('#brand_name_error').text(errors.name[0]); }
                     if(errors.description){ $('#brand_description').addClass('is-invalid'); $('#brand_description_error').text(errors.description[0]); }
                 } else {
-                    alert('Error creando marca: ' + (xhr.responseJSON?.message || xhr.statusText));
+                    showGlobalToast('Error creando marca: ' + (xhr.responseJSON?.message || xhr.statusText), {type: 'error'});
                 }
             });
     });

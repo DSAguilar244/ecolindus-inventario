@@ -1,0 +1,2 @@
+Reports job placeholder: Use `ReportsExportJob` to generate CSV exports and save to `storage/app/exports/`.
+This worker currently uses native CSV generation for portability. To enable XLSX, install `phpoffice/phpspreadsheet` and update the job to use `\PhpOffice\PhpSpreadsheet` classes.

@@ -29,7 +29,13 @@ class PaymentTotalMatchesInvoice implements Rule
         $cash = (float) ($this->request->input('cash_amount') ?? 0);
         $transfer = (float) ($this->request->input('transfer_amount') ?? 0);
 
-        return round($cash + $transfer, 2) === $expectedTotal;
+        $sum = round($cash + $transfer, 2);
+
+        // Allow a small tolerance for rounding differences and accept overpayment (change)
+        $tolerance = 0.01; // 1 cent
+        $ok = ($sum + $tolerance) >= $expectedTotal;
+
+        return $ok;
     }
 
     public function message()

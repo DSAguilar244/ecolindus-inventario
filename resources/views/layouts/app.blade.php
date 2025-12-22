@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>ECOLINDUS Inventario</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     {{-- Bootstrap --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -30,14 +31,17 @@
             padding: 0.5rem 1rem;
             font-weight: 500;
             transition: all 0.2s ease-in-out;
+            color: #bbb !important;
         }
 
         .navbar .nav-link:hover {
             background-color: rgba(255, 255, 255, 0.1);
             border-radius: 0.375rem;
+            color: #fff !important;
         }
 
         .navbar .nav-link.active {
+            color: #fff !important;
             background-color: rgba(255, 255, 255, 0.15);
             border-radius: 0.375rem;
         }
@@ -131,33 +135,33 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center" href="{{ route('dashboard') }}">
+                    <a class="nav-link d-flex align-items-center {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                         <i class="bi bi-speedometer2 me-1"></i> Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center" href="{{ route('products.index') }}">
+                    <a class="nav-link d-flex align-items-center {{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">
                         <i class="bi bi-box me-1"></i> Productos
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center" href="{{ route('brands.index') }}">
+                    <a class="nav-link d-flex align-items-center {{ request()->routeIs('brands.*') ? 'active' : '' }}" href="{{ route('brands.index') }}">
                         <i class="bi bi-tags me-1"></i> Marcas
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center" href="{{ route('categories.index') }}">
+                    <a class="nav-link d-flex align-items-center {{ request()->routeIs('categories.*') ? 'active' : '' }}" href="{{ route('categories.index') }}">
                         <i class="bi bi-list-ul me-1"></i> Categorías
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center" href="{{ route('customers.index') }}">
+                    <a class="nav-link d-flex align-items-center {{ request()->routeIs('customers.*') ? 'active' : '' }}" href="{{ route('customers.index') }}">
                         <i class="bi bi-people me-1"></i> Clientes
                     </a>
                 </li>
                 @can('manage-users')
                 <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center" href="{{ route('admin.users.index') }}">
+                    <a class="nav-link d-flex align-items-center {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
                         <i class="bi bi-shield-lock me-1"></i> Usuarios
                     </a>
                 </li>
@@ -175,7 +179,7 @@
                     </a>
                 </li> --}}
                 <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center" href="{{ route('invoices.index') }}">
+                    <a class="nav-link d-flex align-items-center {{ request()->routeIs('invoices.*') ? 'active' : '' }}" href="{{ route('invoices.index') }}">
                         <i class="bi bi-receipt-cutoff me-1"></i> Ventas
                     </a>
                 </li>
@@ -235,7 +239,6 @@
 
     {{-- Bootstrap JS --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
     {{-- Global toast container for smooth non-blocking alerts --}}
     <div id="globalToastContainer" class="position-fixed top-0 end-0 p-3" style="z-index:9999">
         <div id="globalToastTemplate" class="toast align-items-center bg-dark text-white border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000" style="display:none">
@@ -262,6 +265,9 @@
             el.addEventListener('hidden.bs.toast', function(){ el.remove(); });
         }
     </script>
+
+    {{-- Include AJAX/toast helpers (built into public/js or via asset pipeline) --}}
+    <script src="{{ asset('js/ajax-helpers.js') }}"></script>
 
     {{-- Scripts dinámicos desde las vistas --}}
     @stack('scripts')

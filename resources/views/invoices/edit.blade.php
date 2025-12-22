@@ -207,7 +207,7 @@
                     $('#c_phone').val(customer.phone);
                     if(!$('#selected_customer_id').length){ $('<input>').attr({type:'hidden', id:'selected_customer_id', name:'customer_id', value: customer.id}).appendTo('#invoiceForm'); } else { $('#selected_customer_id').val(customer.id); }
                 } else {
-                    alert('Error al crear cliente: ' + (xhr.responseJSON?.message || xhr.statusText));
+                    showGlobalToast('Error al crear cliente: ' + (xhr.responseJSON?.message || xhr.statusText), {type: 'error'});
                 }
             }
         });
@@ -343,9 +343,9 @@
                     $(sel).val(pid).trigger('change');
                     validateEmitButton();
                 } else {
-                    alert('Producto no encontrado con ese código');
+                    showGlobalToast('Producto no encontrado con ese código', {type: 'error'});
                 }
-            }).fail(function(){ alert('Error al buscar producto'); });
+            }).fail(function(){ showGlobalToast('Error al buscar producto', {type: 'error'}); });
         });
 
         tbody.addEventListener('click', function(e){
@@ -468,7 +468,7 @@
                 if(isNaN(qty) || qty <= 0){ invalid = true; }
             });
             if(invalid){
-                alert('Revise las cantidades: todos los artículos deben tener una cantidad mayor a 0');
+                showGlobalToast('Revise las cantidades: todos los artículos deben tener una cantidad mayor a 0', {type: 'warning'});
                 return false;
             }
         });

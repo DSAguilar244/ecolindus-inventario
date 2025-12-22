@@ -15,7 +15,8 @@ class InvoiceAutoAssignTaxRateTest extends TestCase
 
     public function test_store_assigns_product_tax_rate_when_missing()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['id' => 1]);
+        $this->seed(\Database\Seeders\CashSessionTestSeeder::class);
         $this->actingAs($user);
 
         // product has tax_rate 15%

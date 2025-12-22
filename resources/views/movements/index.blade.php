@@ -131,14 +131,14 @@
                 <div class="modal-body text-center py-4">
                     <i class="bi bi-exclamation-triangle text-danger display-3 mb-4 d-block"></i>
                     <h5 class="mb-3">¿Eliminar este movimiento?</h5>
+                    <p class="text-muted mb-0">Producto: <strong id="movementProductName"></strong></p>
                     <p class="text-muted mb-0">Esta acción no podrá deshacerse.</p>
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                    <form id="deleteForm" action="" method="POST" class="d-inline">
-                        @csrf @method('DELETE')
-                        <button type="submit" class="btn btn-danger">Eliminar</button>
-                    </form>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="bi bi-trash me-2"></i>Eliminar
+                    </button>
                 </div>
             </div>
         </div>
@@ -147,14 +147,50 @@
     @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const deleteModal = document.getElementById('deleteModal');
-            const baseUrl = '{{ url('movements') }}';
-            deleteModal.addEventListener('show.bs.modal', function(event) {
-                const button = event.relatedTarget;
-                const movementId = button.getAttribute('data-movement-id');
-                const form = this.querySelector('#deleteForm');
-                // Construir URL usando helper url() para soportar subdirectorios
-                form.action = baseUrl + '/' + movementId;
+            let movementToDelete = null;
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+            document.querySelectorAll('button[data-bs-target="#deleteModal"]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    movementToDelete = {
+                        id: this.getAttribute('data-movement-id'),
+                        productName: this.closest('tr').querySelector('td').textContent.trim()
+                    };
+                    document.getElementById('movementProductName').textContent = movementToDelete.productName;
+                });
+            });
+
+            confirmDeleteBtn.addEventListener('click', async function() {
+                if(!movementToDelete) return;
+                const id = movementToDelete.id;
+                confirmDeleteBtn.disabled = true;
+                confirmDeleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Eliminando...';
+                
+                try {
+                    const token = document.querySelector('meta[name="csrf-token"]').content;
+                    const resp = await fetch(`/movements/${id}`, {
+                        method: 'DELETE',
+                        credentials: 'same-origin',
+                        headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' }
+                    });
+                    if(resp.ok){
+                        deleteModal.hide();
+                        const row = document.querySelector(`table tbody tr:has(button[data-movement-id="${id}"])`);
+                        if(row) row.remove();
+                        showGlobalToast('Movimiento eliminado', { classname: 'bg-success text-white', delay: 1200 });
+                        setTimeout(function(){ if(document.querySelectorAll('table tbody tr').length === 0){ window.location.reload(); } }, 600);
+                    } else {
+                        const data = await resp.json();
+                        showGlobalToast(data?.message || 'Error al eliminar', { type: 'error' });
+                        confirmDeleteBtn.disabled = false;
+                        confirmDeleteBtn.innerHTML = '<i class="bi bi-trash me-2"></i>Eliminar';
+                    }
+                } catch(err){
+                    showGlobalToast('Error de red', { type: 'error' });
+                    confirmDeleteBtn.disabled = false;
+                    confirmDeleteBtn.innerHTML = '<i class="bi bi-trash me-2"></i>Eliminar';
+                }
             });
         });
     </script>

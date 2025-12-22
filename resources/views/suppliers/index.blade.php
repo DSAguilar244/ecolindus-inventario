@@ -44,7 +44,7 @@
                     </thead>
                     <tbody>
                         @forelse($suppliers as $supplier)
-                        <tr>
+                        <tr data-supplier-id="{{ $supplier->id }}">
                             <td class="ps-4">
                                 <div>
                                     <h6 class="mb-1">{{ $supplier->name }}</h6>
@@ -123,32 +123,66 @@
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                    <form id="deleteForm" action="" method="POST" class="d-inline">
-                        @csrf @method('DELETE')
-                        <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-trash me-2"></i>Eliminar Proveedor
-                        </button>
-                    </form>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="bi bi-trash me-2"></i>Eliminar Proveedor
+                    </button>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    @push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const deleteModal = document.getElementById('deleteModal');
-            deleteModal.addEventListener('show.bs.modal', function(event) {
-                const button = event.relatedTarget;
-                const supplierId = button.getAttribute('data-supplier-id');
-                const supplierName = button.getAttribute('data-supplier-name');
-                const form = this.querySelector('#deleteForm');
-                const nameEl = this.querySelector('#supplierNameToDelete');
-                form.action = `/suppliers/${supplierId}`;
-                nameEl.textContent = supplierName;
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let supplierToDelete = null;
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+        document.querySelectorAll('button[data-bs-target="#deleteModal"]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                supplierToDelete = {
+                    id: this.getAttribute('data-supplier-id'),
+                    name: this.getAttribute('data-supplier-name')
+                };
+                document.getElementById('supplierNameToDelete').textContent = supplierToDelete.name;
             });
         });
-    </script>
-    @endpush
+
+        confirmDeleteBtn.addEventListener('click', async function() {
+            if(!supplierToDelete) return;
+            const id = supplierToDelete.id;
+            confirmDeleteBtn.disabled = true;
+            confirmDeleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Eliminando...';
+            
+            try {
+                const token = document.querySelector('meta[name="csrf-token"]').content;
+                const resp = await fetch(`/suppliers/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'same-origin',
+                    headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' }
+                });
+                if(resp.ok){
+                    deleteModal.hide();
+                    const row = document.querySelector(`tr[data-supplier-id="${id}"]`);
+                    if(row) row.remove();
+                    showGlobalToast('Proveedor eliminado', { classname: 'bg-success text-white', delay: 1200 });
+                    setTimeout(function(){ if(document.querySelectorAll('table tbody tr[data-supplier-id]').length === 0){ window.location.reload(); } }, 600);
+                } else {
+                    const data = await resp.json();
+                    showGlobalToast(data?.message || 'Error al eliminar', { type: 'error' });
+                    confirmDeleteBtn.disabled = false;
+                    confirmDeleteBtn.innerHTML = '<i class="bi bi-trash me-2"></i>Eliminar Proveedor';
+                }
+            } catch(err){
+                showGlobalToast('Error de red', { type: 'error' });
+                confirmDeleteBtn.disabled = false;
+                confirmDeleteBtn.innerHTML = '<i class="bi bi-trash me-2"></i>Eliminar Proveedor';
+            }
+        });
+    });
+</script>
+@endpush
+@endsection
 </div>
 @endsection

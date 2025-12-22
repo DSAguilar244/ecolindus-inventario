@@ -14,7 +14,8 @@ class InvoicePendingFlowTest extends TestCase
 
     public function test_create_pending_then_emit_invoice_changes_status_and_stock()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['id' => 1]);
+        $this->seed(\Database\Seeders\CashSessionTestSeeder::class);
 
         $product = Product::factory()->create(['stock' => 10, 'price' => 5]);
 

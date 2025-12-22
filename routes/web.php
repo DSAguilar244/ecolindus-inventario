@@ -14,6 +14,9 @@ Route::redirect('/', '/login');
 // Reports
 Route::get('/reports/sales-by-customer', [App\Http\Controllers\ReportController::class, 'salesByCustomer'])->name('reports.sales_by_customer');
 Route::get('/reports/sales-by-product', [App\Http\Controllers\ReportController::class, 'salesByProduct'])->name('reports.sales_by_product');
+Route::get('/reports/monthly', [App\Http\Controllers\ReportsController::class, 'monthly'])->name('reports.monthly');
+    Route::get('/reports/monthly/export', [App\Http\Controllers\ReportsController::class, 'export'])->name('reports.export');
+    Route::post('/reports/monthly/queue', [App\Http\Controllers\ReportsController::class, 'queue'])->name('reports.queue');
 
 // Customers
 Route::resource('customers', App\Http\Controllers\CustomerController::class)->except(['show']);
@@ -59,7 +62,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/cash-sessions/open', [App\Http\Controllers\CashSessionController::class, 'open'])->name('cash_sessions.open');
     Route::post('/cash-sessions/close', [App\Http\Controllers\CashSessionController::class, 'close'])->name('cash_sessions.close');
     Route::get('/cash-sessions/summary', [App\Http\Controllers\CashSessionController::class, 'summary'])->name('cash_sessions.summary');
+    Route::get('/cash-sessions/export-pdf', [App\Http\Controllers\CashSessionController::class, 'exportPdf'])->name('cash_sessions.exportPdf');
     Route::get('/cash-sessions/history', [App\Http\Controllers\CashSessionController::class, 'history'])->name('cash_sessions.history');
+    Route::post('/cash-sessions/clear-history', [App\Http\Controllers\CashSessionController::class, 'clearHistory'])->name('cash_sessions.clearHistory');
 
     // Perfil de usuario
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

@@ -24,10 +24,11 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success d-flex align-items-center border-0 shadow-sm">
-            <i class="bi bi-check-circle-fill me-2"></i>
-            <div>{{ session('success') }}</div>
-        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function(){
+                showGlobalToast(@json(session('success')), { classname: 'bg-success text-white', delay: 2000 });
+            });
+        </script>
     @endif
 
     <!-- Products List Card -->
@@ -194,16 +195,34 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const deleteModal = document.getElementById('deleteModal');
+            const deleteForm = deleteModal.querySelector('#deleteForm');
             deleteModal.addEventListener('show.bs.modal', function(event) {
                 const button = event.relatedTarget;
                 const productId = button.getAttribute('data-product-id');
                 const productName = button.getAttribute('data-product-name');
-                
-                const form = this.querySelector('#deleteForm');
                 const productNameElement = this.querySelector('#productNameToDelete');
-                
-                form.action = `/products/${productId}`;
+                deleteForm.action = `/products/${productId}`;
+                deleteForm.dataset.productId = productId;
                 productNameElement.textContent = productName;
+            });
+            // AJAX delete handler
+            deleteForm.addEventListener('submit', async function(e){
+                e.preventDefault();
+                const btn = this.querySelector('button[type="submit"]');
+                if(btn) btn.disabled = true;
+                const res = await ajaxPostForm(this);
+                if(res.ok){
+                    const bsModal = bootstrap.Modal.getInstance(deleteModal);
+                    if(bsModal) bsModal.hide();
+                    const id = this.dataset.productId;
+                    const row = document.querySelector(`tr:has(button[data-product-id="${id}"])`);
+                    if(row) row.remove();
+                    showGlobalToast('Producto eliminado', { classname: 'bg-success text-white', delay: 1200 });
+                    setTimeout(function(){ if(document.querySelectorAll('table tbody tr').length === 0){ window.location.reload(); } }, 600);
+                } else {
+                    showGlobalToast(res.json?.message || 'Error al eliminar producto', { classname: 'bg-danger text-white', delay: 3000 });
+                    if(btn) btn.disabled = false;
+                }
             });
         });
     </script>

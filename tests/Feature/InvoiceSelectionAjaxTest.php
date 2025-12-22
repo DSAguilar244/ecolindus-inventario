@@ -13,7 +13,8 @@ class InvoiceSelectionAjaxTest extends TestCase
 
     public function test_add_invoice_item_using_ajax_product_search()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['id' => 1]);
+        $this->seed(\Database\Seeders\CashSessionTestSeeder::class);
         $product = Product::factory()->create(['name' => 'Agua Pura', 'code' => 'AP-01', 'price' => 10, 'tax_rate' => 0]);
 
         // Verify the search endpoint returns the product
