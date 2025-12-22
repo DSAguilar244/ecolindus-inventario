@@ -1,0 +1,17 @@
+/.git
+/.github
+/node_modules
+/vendor
+/.env
+/.env.*.php
+/.env.backup
+/.env.production.backup
+/storage
+/bootstrap/cache
+/.vscode
+/.idea
+Dockerfile
+docker-compose.yml
+.dockerignore
+.gitignore
+.gitattributes
