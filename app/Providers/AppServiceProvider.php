@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use App\Models\User;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,27 +22,34 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Register our custom CSRF middleware to handle test mode
-        if ($this->app->runningUnitTests()) {
-            // For unit tests, use our custom middleware that skips CSRF
-            $httpKernel = $this->app->make(\Illuminate\Foundation\Http\Kernel::class);
-            // The custom middleware should already be registered via bootstrap,
-            // but ensure it's used for testing
+        /**
+         * -------------------------------------------------------------
+         * 🔒 FORZAR HTTPS EN PRODUCCIÓN (Koyeb usa proxy HTTPS)
+         * -------------------------------------------------------------
+         */
+        if (config('app.env') === 'production') {
+            URL::forceScheme('https');
         }
 
-        // Secure headers middleware available at app/Http/Middleware/SecureHeaders.php.
-        // Register it in `app/Http/Kernel.php` under the `web` group to enable globally.
+        /**
+         * -------------------------------------------------------------
+         * 🔐 AUTHORIZATION GATES (NO TOCAR)
+         * -------------------------------------------------------------
+         */
 
-        // Define simple gates based on the is_admin flag for invoice management
+        // Permite eliminar facturas solo a administradores
         Gate::define('force-delete-invoice', function (User $user) {
             return (bool) ($user->is_admin ?? false) || ($user->role === 'admin');
         });
+
+        // Permite editar facturas emitidas a admin y editores
         Gate::define('edit-emitted-invoice', function (User $user) {
             return (bool) ($user->is_admin ?? false) || in_array($user->role, ['admin', 'editor']);
         });
+
+        // Permite administrar usuarios solo a admin
         Gate::define('manage-users', function (User $user) {
             return (bool) ($user->is_admin ?? false) || $user->role === 'admin';
         });
-        //
     }
 }
