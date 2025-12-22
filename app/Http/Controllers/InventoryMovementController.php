@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\Supplier;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class InventoryMovementController extends Controller
 {
@@ -33,7 +33,7 @@ class InventoryMovementController extends Controller
         return view('movements.index', compact('movements'));
     }
 
-    //Exportar movimientos a PDF
+    // Exportar movimientos a PDF
     public function exportPdf(Request $request)
     {
         $query = InventoryMovement::with(['product', 'supplier', 'user'])->latest();
@@ -52,17 +52,41 @@ class InventoryMovementController extends Controller
 
         $movements = $query->get();
 
-        $pdf = Pdf::loadView('movements.pdf', compact('movements'));
-        return $pdf->download('reporte_movimientos.pdf');
+        // Resumen rápido para mostrar en el PDF
+        $summary = [
+            'total' => $movements->count(),
+            'entrada' => $movements->where('type', 'entrada')->count(),
+            'salida' => $movements->where('type', 'salida')->count(),
+            'dañado' => $movements->where('type', 'dañado')->count(),
+            'devuelto' => $movements->where('type', 'devuelto')->count(),
+        ];
+
+        $pdf = Pdf::loadView('movements.pdf', compact('movements', 'summary'));
+
+        // Configurar PDF (A4)
+        $pdf->setPaper('a4');
+        $pdf->output();
+
+        // Agregar numeración de páginas usando una fuente compatible (DejaVu Sans)
+        $dompdf = $pdf->getDomPDF();
+        $canvas = $dompdf->getCanvas();
+        $fontMetrics = $dompdf->getFontMetrics();
+        // Usar Helvetica (ya incluida en dompdf) para numeración y compatibilidad
+        $font = $fontMetrics->get_font('Helvetica', 'normal');
+        $canvas->page_text(520, 820, 'Página {PAGE_NUM} de {PAGE_COUNT}', $font, 10);
+
+        return $pdf->download('ECOLINDUS_Reporte_Movimientos_'.now()->format('Y-m-d_His').'.pdf');
     }
 
     // Mostrar formulario de creación
-    public function create()
+    public function create(Request $request)
     {
         $products = Product::all();
         $suppliers = Supplier::all();
+        $product = Product::find($request->product);
+        $type = in_array($request->type, ['entrada', 'salida']) ? $request->type : null;
 
-        return view('movements.create', compact('products', 'suppliers'));
+        return view('movements.create', compact('products', 'suppliers', 'product', 'type'));
     }
 
     // Guardar nuevo movimiento
@@ -102,6 +126,7 @@ class InventoryMovementController extends Controller
     public function show(InventoryMovement $movement)
     {
         $movement->load(['product', 'supplier', 'user']);
+
         return view('movements.show', compact('movement'));
     }
 
@@ -109,6 +134,7 @@ class InventoryMovementController extends Controller
     public function destroy(InventoryMovement $movement)
     {
         $movement->delete();
+
         return redirect()->route('movements.index')->with('success', 'Movimiento eliminado.');
     }
 }

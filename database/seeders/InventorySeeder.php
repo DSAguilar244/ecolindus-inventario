@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class InventorySeeder extends Seeder
@@ -12,11 +11,15 @@ class InventorySeeder extends Seeder
      */
     public function run(): void
     {
-        // Crear usuario admin
-        $user = \App\Models\User::factory()->create([
+        // Create or update admin user (idempotent)
+        $adminEmail = env('ADMIN_EMAIL', 'admin@ecolindus.com');
+        $user = \App\Models\User::updateOrCreate([
+            'email' => $adminEmail,
+        ], [
             'name' => 'Admin',
-            'email' => 'admin@ecolindus.com',
-            'password' => bcrypt('admin123'),
+            'password' => bcrypt(env('ADMIN_PASSWORD', 'admin123')),
+            'role' => 'admin',
+            'is_admin' => true,
         ]);
 
         // Crear productos y proveedores
