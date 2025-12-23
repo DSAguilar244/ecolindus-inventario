@@ -52,7 +52,10 @@ class InvoiceController extends Controller
 
     public function create()
     {
-        $products = Product::orderBy('name')->get();
+        // Cache lightweight product list to avoid heavy DB fetches on every invoice creation page load
+        $products = \Illuminate\Support\Facades\Cache::remember('products.select_list', 300, function () {
+            return Product::select('id', 'name')->orderBy('name')->get();
+        });
         $user = Auth::user();
         $hasOpenCashSession = false;
         if ($user) {
@@ -273,7 +276,9 @@ class InvoiceController extends Controller
             }
         }
 
-        $products = Product::orderBy('name')->get();
+        $products = \Illuminate\Support\Facades\Cache::remember('products.select_list', 300, function () {
+            return Product::select('id', 'name')->orderBy('name')->get();
+        });
         $invoice->load('items.product', 'customer');
 
         return view('invoices.edit', compact('invoice', 'products'));
@@ -580,6 +585,19 @@ class InvoiceController extends Controller
 
         if ($request->filled('date_to')) {
             $query->whereDate('date', '<=', $request->input('date_to'));
+        }
+
+        // If the export set is large, queue PDF generation to avoid blocking the request
+        $total = $query->count();
+        if ($total > 200) {
+            // dispatch a job to generate the PDF in background
+            \App\Jobs\GenerateInvoicesPdfJob::dispatch([ // pass filters as needed
+                'customer_id' => $request->input('customer_id'),
+                'date_from' => $request->input('date_from'),
+                'date_to' => $request->input('date_to'),
+            ])->onQueue('default');
+
+            return redirect()->back()->with('success', "Export en cola. Recibirás el PDF cuando esté listo (registros: {$total}).");
         }
 
         $invoices = $query->get();
