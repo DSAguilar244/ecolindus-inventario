@@ -35,6 +35,7 @@
                     <div class="col-md-3"><label class="form-label">Nombre</label><input id="c_first_name" name="customer[first_name]" class="form-control" readonly /></div>
                     <div class="col-md-3"><label class="form-label">Apellido</label><input id="c_last_name" name="customer[last_name]" class="form-control" readonly /></div>
                     <div class="col-md-3"><label class="form-label">Teléfono</label><input id="c_phone" name="customer[phone]" class="form-control" readonly /></div>
+                    <div class="col-md-3"><label class="form-label">Email</label><input id="c_email" name="customer[email]" class="form-control" readonly /></div>
                 </div>
 
                 <h5 class="mt-3">Artículos</h5>
@@ -146,6 +147,7 @@
             $('#c_first_name').val(data.first_name);
             $('#c_last_name').val(data.last_name);
             $('#c_phone').val(data.phone);
+            $('#c_email').val(data.email ?? '');
             $('#c_address').val(data.address ?? '');
             if(!$('#selected_customer_id').length){
                 $('<input>').attr({type:'hidden', id:'selected_customer_id', name:'customer_id', value: data.id}).appendTo('#invoiceForm');
@@ -191,6 +193,7 @@
                 $('#c_first_name').val(resp.customer.first_name);
                 $('#c_last_name').val(resp.customer.last_name);
                     $('#c_phone').val(resp.customer.phone);
+                    $('#c_email').val(resp.customer.email ?? '');
                     $('#c_address').val(resp.customer.address ?? '');
             },
             error: function(xhr){
@@ -205,6 +208,7 @@
                     $('#c_first_name').val(customer.first_name);
                     $('#c_last_name').val(customer.last_name);
                     $('#c_phone').val(customer.phone);
+                    $('#c_email').val(customer.email ?? '');
                     if(!$('#selected_customer_id').length){ $('<input>').attr({type:'hidden', id:'selected_customer_id', name:'customer_id', value: customer.id}).appendTo('#invoiceForm'); } else { $('#selected_customer_id').val(customer.id); }
                 } else {
                     showGlobalToast('Error al crear cliente: ' + (xhr.responseJSON?.message || xhr.statusText), {type: 'error'});
