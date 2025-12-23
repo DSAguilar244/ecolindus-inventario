@@ -15,14 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         /**
          * -------------------------------------------------------------
-         * 🔐 TRUST PROXIES (Koyeb usa proxy HTTPS)
-         * -------------------------------------------------------------
-         */
-        $middleware->trustProxies(at: '*');
-
-        /**
-         * -------------------------------------------------------------
-         * 🌐 WEB MIDDLEWARE GROUP (CUSTOM CSRF)
+         * 🌐 WEB MIDDLEWARE GROUP
          * -------------------------------------------------------------
          */
         $middleware->group('web', [
@@ -31,7 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Session\Middleware\StartSession::class,
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
 
-            // 👇 Tu middleware CSRF personalizado
+            // CSRF personalizado
             VerifyCsrfToken::class,
 
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
