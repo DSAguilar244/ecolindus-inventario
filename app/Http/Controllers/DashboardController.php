@@ -6,6 +6,7 @@ use App\Models\InventoryMovement;
 use App\Models\Invoice;
 use App\Models\Product;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class DashboardController extends Controller
 {
@@ -26,10 +27,13 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
-        $movementStats = DB::table('inventory_movements')
-            ->select('type', DB::raw('COUNT(*) as total'))
-            ->groupBy('type')
-            ->get();
+        // Cache movement stats briefly to avoid repeated heavy aggregation on high traffic
+        $movementStats = Cache::remember('dashboard.movement_stats', 120, function () {
+            return DB::table('inventory_movements')
+                ->select('type', DB::raw('COUNT(*) as total'))
+                ->groupBy('type')
+                ->get();
+        });
 
         // Colores para el gráfico (mapeo por tipo)
         $typeColors = [
@@ -51,44 +55,50 @@ class DashboardController extends Controller
         })->toArray();
 
         // Ventas: totales y serie temporal para últimos 12 meses
-        $monthlySalesTotal = Invoice::whereYear('date', now()->year)
-            ->whereMonth('date', now()->month)
-            ->sum('total');
-
-        $monthlyInvoices = Invoice::whereYear('date', now()->year)
-            ->whereMonth('date', now()->month)
-            ->count();
-
         $recentInvoices = Invoice::with(['customer', 'user'])->latest()->take(5)->get();
 
         $pendingInvoicesCount = Invoice::where('status', '!=', Invoice::STATUS_ANULADA)->count();
 
-        // Series de ventas: últimos 12 meses (orden cronológico)
-        $salesLabels = [];
-        $salesData = [];
-        for ($i = 11; $i >= 0; $i--) {
-            $dt = now()->subMonths($i);
-            $label = $dt->format('M Y');
-            $salesLabels[] = $label;
+        // Series de ventas: últimos 12 meses (consulta agrupada para evitar N+1 y 12 queries)
+        [$salesLabels, $salesData] = Cache::remember('dashboard.sales_12_months', 120, function () {
+            $start = now()->subMonths(11)->startOfMonth();
+            $end = now()->endOfMonth();
 
-            $sum = Invoice::whereYear('date', $dt->year)
-                ->whereMonth('date', $dt->month)
+            $rows = Invoice::select(DB::raw("date_trunc('month', date) as month"), DB::raw('SUM(total) as total'))
+                ->whereBetween('date', [$start, $end])
                 ->where('status', Invoice::STATUS_EMITIDA)
-                ->sum('total');
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get()
+                ->keyBy(function ($r) {
+                    return \Carbon\Carbon::parse($r->month)->format('Y-m');
+                });
 
-            $salesData[] = (float) $sum;
-        }
+            $labels = [];
+            $data = [];
+            for ($i = 11; $i >= 0; $i--) {
+                $dt = now()->subMonths($i);
+                $key = $dt->format('Y-m');
+                $labels[] = $dt->format('M Y');
+                $data[] = isset($rows[$key]) ? (float) $rows[$key]->total : 0.0;
+            }
+
+            return [$labels, $data];
+        });
 
         // Top productos vendidos (por cantidad) en facturas emitidas
-        $topProducts = DB::table('invoice_items')
-            ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
-            ->join('products', 'invoice_items.product_id', '=', 'products.id')
-            ->where('invoices.status', Invoice::STATUS_EMITIDA)
-            ->select('products.name as product_name', DB::raw('SUM(invoice_items.quantity) as total_qty'), DB::raw('SUM(invoice_items.line_total) as revenue'))
-            ->groupBy('products.id', 'products.name')
-            ->orderByDesc('total_qty')
-            ->limit(6)
-            ->get();
+        // Cache top products short-term to reduce aggregation frequency
+        $topProducts = Cache::remember('dashboard.top_products', 120, function () {
+            return DB::table('invoice_items')
+                ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
+                ->join('products', 'invoice_items.product_id', '=', 'products.id')
+                ->where('invoices.status', Invoice::STATUS_EMITIDA)
+                ->select('products.name as product_name', DB::raw('SUM(invoice_items.quantity) as total_qty'), DB::raw('SUM(invoice_items.line_total) as revenue'))
+                ->groupBy('products.id', 'products.name')
+                ->orderByDesc('total_qty')
+                ->limit(6)
+                ->get();
+        });
 
         return view('dashboard', compact(
             'lowStockCount',

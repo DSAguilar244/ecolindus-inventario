@@ -3,8 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Models\Product;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Jobs\GenerateProductsPdfJob;
 
 class GenerateProductsPdf extends Command
 {
@@ -24,25 +23,10 @@ class GenerateProductsPdf extends Command
 
     public function handle()
     {
-        $products = Product::with(['brand', 'categoryModel'])->orderBy('name')->get();
+        // Dispatch a job to generate the PDF in background via queue worker.
+        GenerateProductsPdfJob::dispatch()->onQueue('default');
 
-        $summary = [
-            'total_products' => $products->count(),
-            'critical' => Product::whereColumn('stock', '<', 'min_stock')->count(),
-            'total_stock' => Product::sum('stock'),
-            'categories' => Product::select('category')->distinct()->count(),
-        ];
-
-        $pdf = Pdf::setOptions(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true])->loadView('products.pdf', compact('products', 'summary'));
-        $output = $pdf->output();
-
-        $path = storage_path('app/public/products-report.pdf');
-        if (! file_exists(dirname($path))) {
-            mkdir(dirname($path), 0755, true);
-        }
-        file_put_contents($path, $output);
-
-        $this->info("PDF generado: {$path}");
+        $this->info('PDF generation dispatched to queue (GenerateProductsPdfJob).');
 
         return 0;
     }

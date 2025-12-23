@@ -1,0 +1,53 @@
+{
+  "redis_recommended": {
+    "APP_ENV": "production",
+    "APP_DEBUG": "false",
+    "APP_URL": "https://web-production-172b.up.railway.app/login",
+
+    "DB_CONNECTION": "pgsql",
+    "DB_HOST": "<POSTGRES_HOST>",
+    "DB_PORT": "5432",
+    "DB_DATABASE": "<DB_NAME>",
+    "DB_USERNAME": "<DB_USER>",
+    "DB_PASSWORD": "<DB_PASSWORD>",
+    "DB_SSLMODE": "require",
+
+    "CACHE_STORE": "redis",
+    "SESSION_DRIVER": "redis",
+    "QUEUE_CONNECTION": "redis",
+
+    "REDIS_HOST": "<REDIS_HOST>",
+    "REDIS_PASSWORD": "<REDIS_PASSWORD>",
+    "REDIS_PORT": "6379",
+
+    "TRUSTED_PROXIES": "*",
+
+    "MAIL_MAILER": "log",
+
+    "FILESYSTEM_DISK": "local"
+  },
+
+  "database_fallback": {
+    "APP_ENV": "production",
+    "APP_DEBUG": "false",
+    "APP_URL": "https://web-production-172b.up.railway.app/login",
+
+    "DB_CONNECTION": "pgsql",
+    "DB_HOST": "<POSTGRES_HOST>",
+    "DB_PORT": "5432",
+    "DB_DATABASE": "<DB_NAME>",
+    "DB_USERNAME": "<DB_USER>",
+    "DB_PASSWORD": "<DB_PASSWORD>",
+    "DB_SSLMODE": "require",
+
+    "CACHE_STORE": "file",
+    "SESSION_DRIVER": "file",
+    "QUEUE_CONNECTION": "database",
+
+    "TRUSTED_PROXIES": "*",
+
+    "MAIL_MAILER": "log",
+
+    "FILESYSTEM_DISK": "local"
+  }
+}
