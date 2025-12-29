@@ -88,3 +88,28 @@ Route::middleware('auth')->group(function () {
 
 // Rutas de autenticación (login, registro, etc.)
 require __DIR__.'/auth.php';
+
+// Ruta de debug para inspección de sesión y request
+Route::get('/_debug/request', function (\Illuminate\Http\Request $request) {
+    return response()->json([
+        'is_secure' => $request->isSecure(),
+        'session' => [
+            'all' => session()->all(),
+            'id' => session()->getId(),
+            'has_user' => auth()->check(),
+            'user' => auth()->user(),
+        ],
+        'cookies' => $request->cookies->all(),
+        'headers' => $request->headers->all(),
+        'server' => [
+            'HTTPS' => $_SERVER['HTTPS'] ?? null,
+            'HTTP_X_FORWARDED_PROTO' => $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? null,
+            'SERVER_PORT' => $_SERVER['SERVER_PORT'] ?? null,
+        ],
+        'env' => [
+            'APP_ENV' => env('APP_ENV'),
+            'SESSION_DRIVER' => env('SESSION_DRIVER'),
+            'SESSION_SECURE_COOKIE' => env('SESSION_SECURE_COOKIE'),
+        ],
+    ]);
+});
