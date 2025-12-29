@@ -2,7 +2,7 @@
   "redis_recommended": {
     "APP_ENV": "production",
     "APP_DEBUG": "false",
-    "APP_URL": "https://web-production-172b.up.railway.app/login",
+    "APP_URL": "https://web-production-172b.up.railway.app",
 
     "DB_CONNECTION": "pgsql",
     "DB_HOST": "<POSTGRES_HOST>",
@@ -14,6 +14,7 @@
 
     "CACHE_STORE": "redis",
     "SESSION_DRIVER": "redis",
+    "SESSION_SECURE_COOKIE": "true",
     "QUEUE_CONNECTION": "redis",
 
     "REDIS_HOST": "<REDIS_HOST>",
@@ -30,7 +31,7 @@
   "database_fallback": {
     "APP_ENV": "production",
     "APP_DEBUG": "false",
-    "APP_URL": "https://web-production-172b.up.railway.app/login",
+    "APP_URL": "https://web-production-172b.up.railway.app",
 
     "DB_CONNECTION": "pgsql",
     "DB_HOST": "<POSTGRES_HOST>",
@@ -42,6 +43,7 @@
 
     "CACHE_STORE": "file",
     "SESSION_DRIVER": "file",
+    "SESSION_SECURE_COOKIE": "true",
     "QUEUE_CONNECTION": "database",
 
     "TRUSTED_PROXIES": "*",
