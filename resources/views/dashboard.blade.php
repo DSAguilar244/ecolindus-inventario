@@ -138,7 +138,7 @@
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <h6 class="mb-1 text-muted">Facturas este mes</h6>
-                            <h3 class="mb-0">{{ $monthlyInvoices ?? 0 }}</h3>
+                            <h3 class="mb-0">{{ is_array($monthlyInvoices) ? count($monthlyInvoices) : ($monthlyInvoices ?? 0) }}</h3>
                             <small class="text-muted">({{ $pendingInvoicesCount ?? 0 }} activas)</small>
                         </div>
                     </div>
