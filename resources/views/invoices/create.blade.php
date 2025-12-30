@@ -310,12 +310,16 @@
                     if(qty && (qty.value === '' || qty.value === '0' || isNaN(parseFloat(qty.value)))){
                         qty.value = defaultQty;
                     }
-                    // Autocompletar precio
-                    if(defaultTax && parseFloat(defaultTax) > 0){
-                        const gross = p * (1 + (parseFloat(defaultTax)/100));
-                        price.value = (isNaN(gross) ? 0 : gross).toFixed(2);
-                    } else {
-                        price.value = (isNaN(p) ? 0 : p).toFixed(2);
+                    // Autocompletar precio base y mostrar PVP visual
+                    price.value = (isNaN(p) ? 0 : p).toFixed(2);
+                    // Actualizar el campo visual de PVP si existe
+                    const grossEl = row.querySelector('.line-gross');
+                    if(grossEl){
+                        let gross = p;
+                        if(defaultTax && parseFloat(defaultTax) > 0){
+                            gross = p * (1 + (parseFloat(defaultTax)/100));
+                        }
+                        grossEl.textContent = (isNaN(gross) ? '0.00' : gross.toFixed(2));
                     }
                     // Autocompletar impuesto
                     if(defaultTax !== null && tax && row.dataset.new === '1' && !tax.dataset.userChanged){
