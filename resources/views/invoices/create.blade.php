@@ -297,13 +297,25 @@
                     let p = 0;
                     let defaultTax = null;
                     let defaultQty = 1;
-                    const selected = select.selectedOptions && select.selectedOptions[0];
-                    if(selected){
+                    let selected = select.selectedOptions && select.selectedOptions[0];
+                    // Si hay opción seleccionada, intenta leer data-price y data-tax
+                    if(selected && (selected.dataset.price !== undefined || selected.dataset.tax !== undefined)){
                         p = parseFloat(selected.dataset.price || 0);
                         defaultTax = selected.dataset.tax ?? null;
                     } else {
+                        // fallback para AJAX/Select2
                         const selData = $(select).select2('data')[0];
-                        if(selData){ p = parseFloat(selData.price || 0); defaultTax = selData.tax_rate ?? selData.tax ?? null; }
+                        if(selData){
+                            p = parseFloat(selData.price || 0);
+                            defaultTax = selData.tax_rate ?? selData.tax ?? null;
+                        } else {
+                            // fallback: buscar option seleccionado manualmente
+                            const opt = select.querySelector('option:checked');
+                            if(opt){
+                                p = parseFloat(opt.getAttribute('data-price') || 0);
+                                defaultTax = opt.getAttribute('data-tax') ?? null;
+                            }
+                        }
                         invalidatePaymentIfNeeded();
                     }
                     // Autocompletar cantidad si está vacío o es 0
