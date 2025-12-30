@@ -94,6 +94,7 @@
                         <div class="mb-3"><label class="form-label">Nombre</label><input name="first_name" class="form-control" required></div>
                         <div class="mb-3"><label class="form-label">Apellido</label><input name="last_name" class="form-control"></div>
                         <div class="mb-3"><label class="form-label">Teléfono</label><input name="phone" class="form-control"></div>
+                        <div class="mb-3"><label class="form-label">Email</label><input type="email" name="email" class="form-control"></div>
                         <div class="mb-3"><label class="form-label">Dirección</label><textarea name="address" class="form-control" rows="2"></textarea></div>
                     </form>
                 </div>
