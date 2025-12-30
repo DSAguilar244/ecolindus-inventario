@@ -16,10 +16,11 @@ class SupplierFactory extends Factory
      */
     public function definition(): array
     {
+        $rand = uniqid();
         return [
-            'name' => $this->faker->company,
-            'contact' => $this->faker->phoneNumber,
-            'email' => $this->faker->companyEmail,
+            'name' => ($this->faker ? $this->faker->unique()->company : 'Proveedor Demo ' . $rand),
+            'contact' => ($this->faker ? $this->faker->phoneNumber : '0999999999'),
+            'email' => ($this->faker ? $this->faker->unique()->companyEmail : 'proveedor' . $rand . '@demo.com'),
         ];
     }
 }

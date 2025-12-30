@@ -294,38 +294,42 @@
             if(tax){ tax.addEventListener('change', function(){ tax.dataset.userChanged = '1'; }); }
 
                 function updateUnitPrice(){
-                let p = 0;
-                let defaultTax = null;
-                const selected = select.selectedOptions && select.selectedOptions[0];
-                if(selected){
-                    p = parseFloat(selected.dataset.price || 0);
-                    defaultTax = selected.dataset.tax ?? null;
-                } else {
-                    const selData = $(select).select2('data')[0];
-                    if(selData){ p = parseFloat(selData.price || 0); defaultTax = selData.tax_rate ?? selData.tax ?? null; }
-                    invalidatePaymentIfNeeded();
+                    let p = 0;
+                    let defaultTax = null;
+                    let defaultQty = 1;
+                    const selected = select.selectedOptions && select.selectedOptions[0];
+                    if(selected){
+                        p = parseFloat(selected.dataset.price || 0);
+                        defaultTax = selected.dataset.tax ?? null;
+                    } else {
+                        const selData = $(select).select2('data')[0];
+                        if(selData){ p = parseFloat(selData.price || 0); defaultTax = selData.tax_rate ?? selData.tax ?? null; }
+                        invalidatePaymentIfNeeded();
+                    }
+                    // Autocompletar cantidad si está vacío o es 0
+                    if(qty && (qty.value === '' || qty.value === '0' || isNaN(parseFloat(qty.value)))){
+                        qty.value = defaultQty;
+                    }
+                    // Autocompletar precio
+                    if(defaultTax && parseFloat(defaultTax) > 0){
+                        const gross = p * (1 + (parseFloat(defaultTax)/100));
+                        price.value = (isNaN(gross) ? 0 : gross).toFixed(2);
+                    } else {
+                        price.value = (isNaN(p) ? 0 : p).toFixed(2);
+                    }
+                    // Autocompletar impuesto
+                    if(defaultTax !== null && tax && row.dataset.new === '1' && !tax.dataset.userChanged){
+                        try {
+                            if (window.jQuery && $(tax).hasClass('select2-hidden-accessible')) {
+                                $(tax).val(defaultTax).trigger('change');
+                            } else {
+                                tax.value = defaultTax;
+                            }
+                        } catch (e) { tax.value = defaultTax; }
+                        delete row.dataset.new;
+                    }
+                    updateTotals();
                 }
-                // If product has a tax > 0, show the gross price (price including tax) in the UI for clarity.
-                if(defaultTax && parseFloat(defaultTax) > 0){
-                    const gross = p * (1 + (parseFloat(defaultTax)/100));
-                    price.value = (isNaN(gross) ? 0 : gross).toFixed(2);
-                } else {
-                    price.value = (isNaN(p) ? 0 : p).toFixed(2);
-                }
-                // Only auto-assign tax for rows that were just added and where the user hasn't changed tax
-                if(defaultTax !== null && tax && row.dataset.new === '1' && !tax.dataset.userChanged){
-                    try {
-                        if (window.jQuery && $(tax).hasClass('select2-hidden-accessible')) {
-                            $(tax).val(defaultTax).trigger('change');
-                        } else {
-                            tax.value = defaultTax;
-                        }
-                    } catch (e) { tax.value = defaultTax; }
-                    // clear the new marker so we don't auto-assign repeatedly
-                    delete row.dataset.new;
-                }
-                updateTotals();
-            }
 
             function updateTotals(){
                 computeGlobalTotals();
