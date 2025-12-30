@@ -340,7 +340,9 @@
                 invalidatePaymentIfNeeded();
             }
 
+            // Siempre actualizar los campos al cambiar producto
             select.addEventListener('change', updateUnitPrice);
+            $(select).on('change', updateUnitPrice);
             // merge duplicate product selection: increase quantity of the existing row and remove this row
             $(select).on('select2:select', function(e){
                 const pid = select.value;
@@ -388,7 +390,8 @@
             price.addEventListener('input', updateTotals);
             tax.addEventListener('change', updateTotals);
 
-            updateUnitPrice();
+            // Forzar autocompletado al inicializar la fila
+            setTimeout(updateUnitPrice, 0);
         }
 
         addBtn.addEventListener('click', ()=>{
@@ -397,20 +400,27 @@
             // mark new row for auto-assignment behavior
             tbody.lastElementChild.dataset.new = '1';
             // Activate select2 on the newly added select
-                const selectEl = $(tbody.lastElementChild).find('.product-select');
-                if(!selectEl.hasClass('select2-hidden-accessible')){
-                    selectEl.select2({
-                ajax: {
-                    url: '{{ route('products.search') }}',
-                    dataType: 'json',
-                    delay: 250,
-                    data: function(params){ return { q: params.term }; },
-                    processResults: function(data){ return { results: data.results }; }
-                },
-                minimumInputLength: 0,
-                allowClear: true
-                    });
+            const selectEl = $(tbody.lastElementChild).find('.product-select');
+            if(!selectEl.hasClass('select2-hidden-accessible')){
+                selectEl.select2({
+                    ajax: {
+                        url: '{{ route('products.search') }}',
+                        dataType: 'json',
+                        delay: 250,
+                        data: function(params){ return { q: params.term }; },
+                        processResults: function(data){ return { results: data.results }; }
+                    },
+                    minimumInputLength: 0,
+                    allowClear: true
+                });
+            }
+            // Forzar evento de cambio para autocompletar si ya hay valor
+            setTimeout(()=>{
+                const sel = tbody.lastElementChild.querySelector('.product-select');
+                if(sel && sel.value){
+                    sel.dispatchEvent(new Event('change', { bubbles: true }));
                 }
+            }, 0);
             // validate button on row change
             attachRowListeners(tbody.lastElementChild);
             invalidatePaymentIfNeeded();
