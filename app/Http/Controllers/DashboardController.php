@@ -100,6 +100,10 @@ class DashboardController extends Controller
                 ->get();
         });
 
+        // Asegura que la variable monthlySalesTotal esté definida
+        if (!isset($monthlySalesTotal)) {
+            $monthlySalesTotal = 0;
+        }
         return view('dashboard', compact(
             'lowStockCount',
             'totalProducts',
