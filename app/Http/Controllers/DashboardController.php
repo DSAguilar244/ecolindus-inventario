@@ -104,6 +104,9 @@ class DashboardController extends Controller
         if (!isset($monthlySalesTotal)) {
             $monthlySalesTotal = 0;
         }
+        if (!isset($monthlyInvoices)) {
+            $monthlyInvoices = [];
+        }
         return view('dashboard', compact(
             'lowStockCount',
             'totalProducts',
